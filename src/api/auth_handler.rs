@@ -3,6 +3,7 @@ use serde::Deserialize;
 use crate::service::auth_service::{register_user, login_user};
 use crate::errors::app_error::AppError;
 use diesel::SqliteConnection;
+use diesel::r2d2;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {

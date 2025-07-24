@@ -1,8 +1,9 @@
 use bcrypt::{hash, verify, DEFAULT_COST};
 use diesel::prelude::*;
+use diesel::r2d2;
 use jsonwebtoken::{encode, Header, EncodingKey};
 use crate::models::auth::Claims;
-use crate::models::user::{NewUser, User};
+use crate::models::user::NewUser;
 use crate::db::user_query;
 use crate::errors::app_error::AppError;
 
@@ -44,7 +45,11 @@ pub async fn login_user(
     let token = encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(std::env::var("JWT_SECRET").expect("JWT_SECRET must be set").as_ref()),
+        &EncodingKey::from_secret(
+            std::env::var("JWT_SECRET")
+                .expect("JWT_SECRET must be set")
+                .as_ref(),
+        ),
     )?;
     Ok(token)
 }
