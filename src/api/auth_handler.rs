@@ -33,3 +33,8 @@ pub async fn login(
     let token = login_user(&pool, &data.email, &data.password).await?;
     Ok((StatusCode::OK, Json(serde_json::json!({ "token": token }))))
 }
+
+pub async fn logout() -> impl IntoResponse {
+    // Since JWT is stateless, just return success and client should delete token
+    (StatusCode::OK, Json(serde_json::json!({ "message": "Logged out successfully" })))
+}
