@@ -13,6 +13,7 @@ mod config;
 mod errors;
 mod utils;
 mod schema;
+mod middleware;
 
 #[tokio::main]
 async fn main() {
@@ -36,7 +37,7 @@ async fn main() {
 
     // Define address and port to run the server
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    println!("🚀 Server listening on http://{}", addr); // ✅ Log ini akan muncul!
+    println!("🚀 Server listening on http://{}", addr);
 
     // Run the Axum server
     axum::serve(tokio::net::TcpListener::bind(&addr).await.unwrap(), app)

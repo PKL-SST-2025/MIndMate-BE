@@ -45,6 +45,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    token_blacklist (id) {
+        id -> Nullable<Integer>,
+        token -> Text,
+        created_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Integer,
         username -> Text,
@@ -65,5 +73,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     journals,
     moods,
     psychologist_requests,
+    token_blacklist,
     users,
 );

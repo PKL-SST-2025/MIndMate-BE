@@ -3,11 +3,13 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-
+use serde::Serialize;
 use serde_json::json;
 
-#[derive(Debug)]
+/// Custom application error
+#[derive(Debug, Clone, Serialize)]
 pub enum AppError {
+    NotFound(String),
     BadRequest(String),
     Unauthorized(String),
     InternalServerError(String),
@@ -15,18 +17,26 @@ pub enum AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, error_message) = match self {
+        let (status, message) = match self {
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
             AppError::InternalServerError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
-        (status, Json(json!({ "error": error_message }))).into_response()
+
+        let body = json!({ "error": message });
+        (status, Json(body)).into_response()
     }
 }
 
+// === Error Conversions === //
+
 impl From<diesel::result::Error> for AppError {
     fn from(err: diesel::result::Error) -> Self {
-        AppError::InternalServerError(err.to_string())
+        match err {
+            diesel::result::Error::NotFound => AppError::NotFound("Data not found".to_string()),
+            _ => AppError::InternalServerError(err.to_string()),
+        }
     }
 }
 

@@ -14,6 +14,12 @@ pub async fn register_user(
     password: &str,
 ) -> Result<(), AppError> {
     let conn = &mut pool.get()?;
+
+    // Cek apakah email sudah terdaftar
+    if let Some(_) = user_query::find_user_by_email(conn, email)? {
+        return Err(AppError::BadRequest("Email sudah terdaftar".to_string()));
+    }
+
     let hashed_password = hash(password, DEFAULT_COST)?;
     let new_user = NewUser {
         username: username.to_string(),

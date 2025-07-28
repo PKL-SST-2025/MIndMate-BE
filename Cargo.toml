@@ -5,9 +5,10 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7"
+axum-extra = { version = "0.9", features = ["typed-header"] }
 tokio = { version = "1.0", features = ["full"] }
 tower-http = { version = "0.5", features = ["cors"] }
-diesel = { version = "2.2", features = ["sqlite", "r2d2"] }
+diesel = { version = "2.2", features = ["sqlite", "r2d2", "chrono"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 jsonwebtoken = "9.3"
@@ -16,4 +17,6 @@ chrono = { version = "0.4", features = ["serde"] }
 dotenv = "0.15"
 env_logger = "0.11"
 log = "0.4"
+r2d2 = "0.8"
 libsqlite3-sys = { version = "0.28", features = ["bundled"] }
+headers = "0.4.1"
