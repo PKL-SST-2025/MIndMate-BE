@@ -7,4 +7,5 @@ pub fn auth_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sqlite
     Router::new()
         .route("/auth/register", axum::routing::post(auth_handler::register))
         .route("/auth/login", axum::routing::post(auth_handler::login))
+        .route("/auth/logout", axum::routing::post(auth_handler::logout))
 }
