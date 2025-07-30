@@ -1,40 +1,78 @@
-use axum::{extract::{State, Json}, http::StatusCode, response::IntoResponse};
-use serde::Deserialize;
-use crate::service::auth_service::{register_user, login_user};
+use axum::{
+    extract::{State, Json},
+    response::IntoResponse,
+    http::HeaderMap,
+};
+use crate::service::auth_service::{register_user, login_user, logout_user};
 use crate::errors::app_error::AppError;
-use diesel::SqliteConnection;
+use crate::models::auth::{RegisterRequest, LoginRequest, LoginResponse};
 use diesel::r2d2;
-
-#[derive(Deserialize)]
-pub struct RegisterRequest {
-    pub username: String,
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(Deserialize)]
-pub struct LoginRequest {
-    pub email: String,
-    pub password: String,
-}
+use diesel::SqliteConnection;
+use serde_json::json;
 
 pub async fn register(
     State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
     Json(data): Json<RegisterRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    register_user(&pool, &data.username, &data.email, &data.password).await?;
-    Ok((StatusCode::OK, Json("User registered successfully")))
+
+    let user = register_user(
+        &pool, 
+        &data.username,    
+        &data.email,       
+        &data.password,    
+        data.age,          
+        data.gender,     
+        None              
+    )?;
+    
+    Ok(Json(json!({
+        "message": "User registered successfully",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "age": user.age,
+            "gender": user.gender,
+            "password": user.password,
+        }
+    })))
 }
 
 pub async fn login(
     State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
     Json(data): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    let token = login_user(&pool, &data.email, &data.password).await?;
-    Ok((StatusCode::OK, Json(serde_json::json!({ "token": token }))))
+    let login_response = login_user(&pool, &data.email, &data.password)?;
+    
+    Ok(Json(LoginResponse {
+        token: login_response.token,
+        user: login_response.user,
+    }))
 }
 
-pub async fn logout() -> impl IntoResponse {
-    // Since JWT is stateless, just return success and client should delete token
-    (StatusCode::OK, Json(serde_json::json!({ "message": "Logged out successfully" })))
+pub async fn logout(
+    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, AppError> {
+    // Extract token dari Authorization header
+    let auth_header = headers
+        .get("Authorization")
+        .ok_or_else(|| AppError::Unauthorized("Authorization header missing".to_string()))?;
+
+    let auth_str = auth_header
+        .to_str()
+        .map_err(|_| AppError::Unauthorized("Invalid Authorization header".to_string()))?;
+
+    if !auth_str.starts_with("Bearer ") {
+        return Err(AppError::Unauthorized("Invalid Authorization scheme".to_string()));
+    }
+
+    let token = &auth_str[7..];
+
+    // Proses logout (validasi token dan blacklist)
+    logout_user(&pool, token)?;
+
+    Ok(Json(json!({
+        "message": "Successfully logged out"
+    })))
 }
