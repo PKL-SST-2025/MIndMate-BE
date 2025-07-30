@@ -50,8 +50,11 @@ diesel::table! {
         username -> Text,
         email -> Text,
         password -> Text,
+        age -> Nullable<Integer>,
+        gender -> Nullable<Text>,
         settings -> Nullable<Text>,
         created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
@@ -66,4 +69,13 @@ diesel::allow_tables_to_appear_in_same_query!(
     moods,
     psychologist_requests,
     users,
+    token_blacklist,
 );
+
+diesel::table! {
+    token_blacklist (id) {
+        id -> Nullable<Integer>,
+        token -> Text,
+        created_at -> Nullable<Timestamp>,
+    }
+}

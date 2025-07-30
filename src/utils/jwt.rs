@@ -1,14 +1,41 @@
-use jsonwebtoken::{decode, DecodingKey, Validation};
-use crate::models::auth::Claims;
-use crate::errors::app_error::AppError;
+use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey};
+use serde::{Deserialize, Serialize};
+use chrono::{Utc, Duration};
+use std::env;
 
-pub fn validate_token(token: &str) -> Result<Claims, AppError> {
-    let claims = decode::<Claims>(
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: String, // Subject (user id)
+    pub exp: usize,  // Expiration time
+    pub iat: usize,  // Issued at
+}
+
+pub fn generate_token(user_id: &str) -> Result<String, jsonwebtoken::errors::Error> {
+    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string());
+    
+    let now = Utc::now();
+    let exp = now + Duration::hours(24); // Token expires in 24 hours
+    
+    let claims = Claims {
+        sub: user_id.to_string(),
+        exp: exp.timestamp() as usize,
+        iat: now.timestamp() as usize,
+    };
+
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_ref()),
+    )
+}
+
+pub fn validate_token(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
+    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string());
+    
+    decode::<Claims>(
         token,
-        &DecodingKey::from_secret(std::env::var("JWT_SECRET").expect("JWT_SECRET must be set").as_ref()),
+        &DecodingKey::from_secret(secret.as_ref()),
         &Validation::default(),
     )
-    .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))?
-    .claims;
-    Ok(claims)
+    .map(|token_data| token_data.claims)
 }
