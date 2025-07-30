@@ -1,32 +1,80 @@
 use diesel::prelude::*;
-use diesel::SelectableHelper;
-use crate::schema::users;
-use crate::models::user::{NewUser, User};
+use diesel::SqliteConnection;
+use crate::models::user::{User, NewUser};
 use crate::errors::app_error::AppError;
+use crate::schema::users;
+use chrono::Utc;
 
-pub fn insert_user(conn: &mut SqliteConnection, new_user: NewUser) -> Result<(), AppError> {
+// Function utama yang support semua parameter
+pub fn create_user(
+    conn: &mut SqliteConnection,
+    username: &str,
+    email: &str,
+    password: &str,
+    age: Option<i32>,
+    gender: Option<String>,
+    settings: Option<String>,
+) -> Result<User, AppError> {
+    let new_user = NewUser {
+        username: username.to_string(),
+        email: email.to_string(),
+        password: password.to_string(),
+        age,
+        gender,
+        settings,
+        created_at: Utc::now().naive_utc(),
+        updated_at: Utc::now().naive_utc(),
+    };
+
     diesel::insert_into(users::table)
         .values(&new_user)
-        .execute(conn)?;
-    Ok(())
-}
+        .execute(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-pub fn find_user_by_email(conn: &mut SqliteConnection, email: &str) -> Result<Option<User>, AppError> {
-    let user = users::table
+    // Get the created user
+    users::table
         .filter(users::email.eq(email))
-        .select(User::as_select())
-        .first::<User>(conn)
-        .optional()?;
-    Ok(user)
+        .first(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-pub fn find_user_by_id(conn: &mut SqliteConnection, user_id: i32) -> Result<Option<User>, AppError> {
-    let user = users::table
+pub fn find_user_by_id(
+    conn: &mut SqliteConnection,
+    user_id: i32,
+) -> Result<User, AppError> {
+    users::table
         .filter(users::id.eq(user_id))
-        .select(User::as_select())
-        .first::<User>(conn)
-        .optional()?;
-    Ok(user)
+        .first(conn)
+        .map_err(|e| match e {
+            diesel::result::Error::NotFound => AppError::NotFound("User not found".to_string()),
+            _ => AppError::DatabaseError(e.to_string()),
+        })
+}
+
+pub fn find_user_by_email(
+    conn: &mut SqliteConnection,
+    email: &str,
+) -> Result<User, AppError> {
+    users::table
+        .filter(users::email.eq(email))
+        .first(conn)
+        .map_err(|e| match e {
+            diesel::result::Error::NotFound => AppError::NotFound("User not found".to_string()),
+            _ => AppError::DatabaseError(e.to_string()),
+        })
+}
+
+pub fn find_user_by_username(
+    conn: &mut SqliteConnection,
+    username: &str,
+) -> Result<User, AppError> {
+    users::table
+        .filter(users::username.eq(username))
+        .first(conn)
+        .map_err(|e| match e {
+            diesel::result::Error::NotFound => AppError::NotFound("User not found".to_string()),
+            _ => AppError::DatabaseError(e.to_string()),
+        })
 }
 
 pub fn update_user_profile(
@@ -34,12 +82,21 @@ pub fn update_user_profile(
     user_id: i32,
     new_username: &str,
     new_email: &str,
-) -> Result<(), AppError> {
-    use crate::schema::users::dsl::*;
-    diesel::update(users.filter(id.eq(user_id)))
-        .set((username.eq(new_username), email.eq(new_email)))
-        .execute(conn)?;
-    Ok(())
+    new_age: Option<i32>,
+    new_gender: Option<String>,
+) -> Result<User, AppError> {
+    diesel::update(users::table.filter(users::id.eq(user_id)))
+        .set((
+            users::username.eq(new_username),
+            users::email.eq(new_email),
+            users::age.eq(new_age),
+            users::gender.eq(new_gender),
+            users::updated_at.eq(Utc::now().naive_utc()),
+        ))
+        .execute(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    find_user_by_id(conn, user_id)
 }
 
 pub fn update_user_password(
@@ -47,9 +104,20 @@ pub fn update_user_password(
     user_id: i32,
     new_password: &str,
 ) -> Result<(), AppError> {
-    use crate::schema::users::dsl::*;
-    diesel::update(users.filter(id.eq(user_id)))
-        .set(password.eq(new_password))
-        .execute(conn)?;
+    diesel::update(users::table.filter(users::id.eq(user_id)))
+        .set((
+            users::password.eq(new_password),
+            users::updated_at.eq(Utc::now().naive_utc()),
+        ))
+        .execute(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
     Ok(())
+}
+
+// New function to get all users
+pub fn get_all_users(conn: &mut SqliteConnection) -> Result<Vec<User>, AppError> {
+    users::table
+        .load::<User>(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
