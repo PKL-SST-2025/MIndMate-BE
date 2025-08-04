@@ -1,1 +1,1 @@
-DROP TABLE journals;
+DROP TABLE IF EXISTS journals;

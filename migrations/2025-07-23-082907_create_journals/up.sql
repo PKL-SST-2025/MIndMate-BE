@@ -3,6 +3,7 @@ CREATE TABLE journals (
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL,
+    updated_at TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
