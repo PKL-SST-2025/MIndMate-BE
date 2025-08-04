@@ -2,7 +2,7 @@
 
 diesel::table! {
     help_requests (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         user_id -> Integer,
         name -> Text,
         email -> Text,
@@ -13,28 +13,31 @@ diesel::table! {
 
 diesel::table! {
     journals (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         user_id -> Integer,
         title -> Text,
         content -> Text,
         created_at -> Timestamp,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 
 diesel::table! {
     moods (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         user_id -> Integer,
+        date -> Date,
         mood -> Text,
-        intensity -> Integer,
-        description -> Nullable<Text>,
+        emoji -> Text,
+        notes -> Nullable<Text>,
         created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
 diesel::table! {
     psychologist_requests (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         user_id -> Integer,
         name -> Text,
         email -> Text,

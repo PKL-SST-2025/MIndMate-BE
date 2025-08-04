@@ -1,1 +1,1 @@
-DROP TABLE moods;
+DROP TABLE IF EXISTS moods;
