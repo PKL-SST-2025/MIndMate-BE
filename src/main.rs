@@ -2,8 +2,10 @@ use axum::Router;
 use dotenv::dotenv;
 use std::env;
 use std::net::SocketAddr;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{CorsLayer}; 
+use axum::http::{HeaderValue, Method}; 
 use tokio::time::{sleep, Duration};
+use axum::http::header::{AUTHORIZATION, CONTENT_TYPE, ACCEPT};
 use diesel::r2d2;
 use diesel::SqliteConnection;
 
@@ -71,10 +73,17 @@ async fn main() {
         .merge(path::init_routes())
         .with_state(pool);
 
+    // CORS configuration untuk development
+    let cors = CorsLayer::new()
+        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT])
+        .allow_credentials(true);
+
     // Create the main app dengan prefix /api
     let app = Router::new()
-        .nest("/api", api_routes)  
-        .layer(CorsLayer::permissive());
+        .nest("/api", api_routes)
+        .layer(cors);
 
     // Define address and port to run the server
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
