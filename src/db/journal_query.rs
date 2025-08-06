@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 use diesel::SqliteConnection;
-use chrono::{NaiveDate, Utc};
+use chrono::{NaiveDate, Utc, Duration, Timelike};
 use crate::models::journal::{Journal, NewJournal};
 use crate::errors::app_error::AppError;
 use crate::schema::journals;
@@ -12,11 +12,19 @@ pub fn create_journal(
     content: &str,
     created_at: Option<NaiveDate>,
 ) -> Result<Journal, AppError> {
-    let created_date = created_at.unwrap_or_else(|| Utc::now().date_naive());
+    // created_at is now required - should be provided by frontend
+    let created_date = created_at
+        .ok_or_else(|| AppError::BadRequest("created_at date is required".to_string()))?;
+    
     let now = Utc::now().naive_utc();
     
-    // Convert NaiveDate to NaiveDateTime by adding time
-    let created_datetime = created_date.and_hms_opt(0, 0, 0).unwrap_or(now);
+    // Convert NaiveDate to NaiveDateTime by using the provided date with current time
+    // This ensures we use the user-specified date but with the current time for precise ordering
+    let created_datetime = created_date.and_hms_opt(
+        now.hour(), 
+        now.minute(), 
+        now.second()
+    ).unwrap_or(now);
     
     let new_journal = NewJournal {
         user_id,
@@ -225,5 +233,71 @@ pub fn search_journals(
         .offset(offset as i64)
         .select(Journal::as_select())
         .load::<Journal>(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))
+}
+
+// Function to get journals for last N days for streak calculation
+pub fn get_journals_for_streak(
+    conn: &mut SqliteConnection,
+    user_id: i32,
+    days: i32,
+) -> Result<Vec<Journal>, AppError> {
+    let cutoff_date = Utc::now().date_naive() - Duration::days(days as i64);
+    let cutoff_datetime = cutoff_date.and_hms_opt(0, 0, 0).unwrap_or_default();
+    
+    journals::table
+        .filter(journals::user_id.eq(user_id))
+        .filter(journals::created_at.ge(cutoff_datetime))
+        .order(journals::created_at.desc())
+        .select(Journal::as_select())
+        .load::<Journal>(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))
+}
+
+// Function to get unique dates when user wrote journals
+pub fn get_journal_dates_by_user(
+    conn: &mut SqliteConnection,
+    user_id: i32,
+) -> Result<Vec<NaiveDate>, AppError> {
+    use diesel::sql_types::Date;
+    use diesel::sql_query;
+    use diesel::RunQueryDsl;
+    
+    #[derive(diesel::QueryableByName)]
+    struct DateResult {
+        #[diesel(sql_type = Date)]
+        date: NaiveDate,
+    }
+    
+    let results: Vec<DateResult> = sql_query(
+        "SELECT DATE(created_at) as date 
+         FROM journals 
+         WHERE user_id = ?1 
+         GROUP BY DATE(created_at) 
+         ORDER BY DATE(created_at) DESC"
+    )
+    .bind::<diesel::sql_types::Integer, _>(user_id)
+    .load(conn)
+    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    
+    Ok(results.into_iter().map(|r| r.date).collect())
+}
+
+// Function to get journal count for last N days
+pub fn get_journal_count_last_days(
+    conn: &mut SqliteConnection,
+    user_id: i32,
+    days: i32,
+) -> Result<i64, AppError> {
+    use diesel::dsl::count;
+    
+    let cutoff_date = Utc::now().date_naive() - Duration::days(days as i64);
+    let cutoff_datetime = cutoff_date.and_hms_opt(0, 0, 0).unwrap_or_default();
+    
+    journals::table
+        .filter(journals::user_id.eq(user_id))
+        .filter(journals::created_at.ge(cutoff_datetime))
+        .select(count(journals::id))
+        .first(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
