@@ -1,5 +1,5 @@
 use diesel::prelude::*;
-use chrono::{NaiveDateTime, NaiveDate};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Selectable, Debug, Serialize)]
@@ -38,7 +38,7 @@ pub struct JournalResponse {
 pub struct CreateJournalRequest {
     pub title: String,
     pub content: String,
-    pub created_at: Option<NaiveDate>, 
+    pub created_at: Option<String>, // Changed from NaiveDate to String for MM-DD-YYYY format
 }
 
 #[derive(Debug, Deserialize)]

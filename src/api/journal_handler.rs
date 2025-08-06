@@ -28,8 +28,8 @@ pub struct PaginationQuery {
 
 #[derive(Deserialize)]
 pub struct DateRangeQuery {
-    pub start_date: NaiveDate,
-    pub end_date: NaiveDate,
+    pub start_date: String, // Changed from NaiveDate to String for MM-DD-YYYY parsing
+    pub end_date: String,   // Changed from NaiveDate to String for MM-DD-YYYY parsing
 }
 
 #[derive(Deserialize)]
@@ -125,7 +125,14 @@ pub async fn get_journals_by_date_range_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
-    let journals = get_journals_by_date_range(&pool, user_id, range.start_date, range.end_date)?;
+    // Parse dates from MM-DD-YYYY format
+    let start_date = NaiveDate::parse_from_str(&range.start_date, "%m-%d-%Y")
+        .map_err(|_| AppError::BadRequest("Invalid start_date format. Use MM-DD-YYYY".to_string()))?;
+    
+    let end_date = NaiveDate::parse_from_str(&range.end_date, "%m-%d-%Y")
+        .map_err(|_| AppError::BadRequest("Invalid end_date format. Use MM-DD-YYYY".to_string()))?;
+
+    let journals = get_journals_by_date_range(&pool, user_id, start_date, end_date)?;
     Ok(Json(journals))
 }
 

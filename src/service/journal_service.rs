@@ -10,7 +10,7 @@ pub fn create_journal(
     user_id: i32,
     title: &str,
     content: &str,
-    created_at: Option<NaiveDate>,
+    created_at: Option<String>, // Changed from NaiveDate to String
 ) -> Result<JournalResponse, AppError> {
     let mut conn = pool
         .get()
@@ -25,7 +25,15 @@ pub fn create_journal(
         return Err(AppError::BadRequest("Content cannot be empty".to_string()));
     }
 
-    let journal_data = journal_query::create_journal(&mut conn, user_id, title, content, created_at)?;
+    // Parse the date from MM-DD-YYYY format if provided
+    let parsed_date = if let Some(date_str) = created_at {
+        Some(NaiveDate::parse_from_str(&date_str, "%m-%d-%Y")
+            .map_err(|_| AppError::BadRequest("Invalid date format. Use MM-DD-YYYY".to_string()))?)
+    } else {
+        None
+    };
+
+    let journal_data = journal_query::create_journal(&mut conn, user_id, title, content, parsed_date)?;
 
     Ok(JournalResponse {
         id: journal_data.id,
