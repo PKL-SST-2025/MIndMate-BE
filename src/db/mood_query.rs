@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 use diesel::SqliteConnection;
-use chrono::{NaiveDate, Utc};
+use chrono::{NaiveDate, Utc, Duration};
 use crate::models::mood::{Mood, NewMood};
 use crate::errors::app_error::AppError;
 use crate::schema::moods;
@@ -23,7 +23,7 @@ pub fn create_mood(
         emoji: emoji.to_string(),
         notes,
         created_at: now,
-        updated_at: now, // Changed from Some(now) to now
+        updated_at: now,
     };
 
     diesel::insert_into(moods::table)
@@ -31,7 +31,6 @@ pub fn create_mood(
         .execute(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-    // Get the created mood
     moods::table
         .filter(moods::user_id.eq(user_id))
         .filter(moods::date.eq(mood_date))
@@ -112,7 +111,6 @@ pub fn update_mood(
     new_emoji: Option<String>,
     new_notes: Option<String>,
 ) -> Result<Mood, AppError> {
-    // Check if mood exists and belongs to user
     let existing_mood = moods::table
         .filter(moods::id.eq(mood_id))
         .filter(moods::user_id.eq(user_id))
@@ -123,7 +121,6 @@ pub fn update_mood(
             _ => AppError::DatabaseError(e.to_string()),
         })?;
 
-    // Build update query dynamically
     let mood_to_update = new_mood.unwrap_or(existing_mood.mood);
     let emoji_to_update = new_emoji.unwrap_or(existing_mood.emoji);
     let notes_to_update = if new_notes.is_some() { new_notes } else { existing_mood.notes };
@@ -133,7 +130,7 @@ pub fn update_mood(
             moods::mood.eq(mood_to_update),
             moods::emoji.eq(emoji_to_update),
             moods::notes.eq(notes_to_update),
-            moods::updated_at.eq(Utc::now().naive_utc()), // Changed from Some(...) to direct value
+            moods::updated_at.eq(Utc::now().naive_utc()),
         ))
         .execute(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -162,7 +159,7 @@ pub fn get_recent_moods(
     user_id: i32,
     days: i32,
 ) -> Result<Vec<Mood>, AppError> {
-    let cutoff_date = Utc::now().date_naive() - chrono::Duration::days(days as i64);
+    let cutoff_date = Utc::now().date_naive() - Duration::days(days as i64);
     
     moods::table
         .filter(moods::user_id.eq(user_id))
@@ -173,7 +170,6 @@ pub fn get_recent_moods(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-// Function to get mood statistics (simplified version using Diesel)
 pub fn get_mood_stats_simple(
     conn: &mut SqliteConnection,
     user_id: i32,
@@ -214,4 +210,85 @@ pub fn get_all_moods_by_user(
         .select(Mood::as_select())
         .load::<Mood>(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))
+}
+
+// NEW: Get moods for trend analysis (chronologically ordered)
+pub fn get_moods_for_trend(
+    conn: &mut SqliteConnection,
+    user_id: i32,
+    days: Option<i32>,
+) -> Result<Vec<Mood>, AppError> {
+    let mut query = moods::table
+        .filter(moods::user_id.eq(user_id))
+        .into_boxed();
+
+    if let Some(days) = days {
+        let cutoff_date = Utc::now().date_naive() - Duration::days(days as i64);
+        query = query.filter(moods::date.ge(cutoff_date));
+    }
+
+    query
+        .order(moods::date.asc()) // Ascending for trend analysis
+        .select(Mood::as_select())
+        .load::<Mood>(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))
+}
+
+// NEW: Get moods grouped by period for analytics
+pub fn get_moods_by_period(
+    conn: &mut SqliteConnection,
+    user_id: i32,
+    period: &str,
+) -> Result<Vec<Mood>, AppError> {
+    let cutoff_date = match period {
+        "week" => Utc::now().date_naive() - Duration::days(7),
+        "month" => Utc::now().date_naive() - Duration::days(30),
+        "year" => Utc::now().date_naive() - Duration::days(365),
+        _ => NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(), // All time
+    };
+
+    moods::table
+        .filter(moods::user_id.eq(user_id))
+        .filter(moods::date.ge(cutoff_date))
+        .order(moods::date.asc())
+        .select(Mood::as_select())
+        .load::<Mood>(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))
+}
+
+// NEW: Get mood distribution data - SIMPLIFIED VERSION
+pub fn get_mood_distribution_data(
+    conn: &mut SqliteConnection,
+    user_id: i32,
+    period: Option<&str>,
+) -> Result<Vec<(String, i64)>, AppError> {
+    // For now, let's get all moods and count them manually to avoid complex Diesel queries
+    let mut moods_query = moods::table
+        .filter(moods::user_id.eq(user_id))
+        .into_boxed();
+
+    if let Some(period) = period {
+        let cutoff_date = match period {
+            "week" => Utc::now().date_naive() - Duration::days(7),
+            "month" => Utc::now().date_naive() - Duration::days(30),
+            "year" => Utc::now().date_naive() - Duration::days(365),
+            _ => NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+        };
+        moods_query = moods_query.filter(moods::date.ge(cutoff_date));
+    }
+
+    let all_moods = moods_query
+        .select(Mood::as_select())
+        .load::<Mood>(conn)
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    // Count moods manually
+    let mut mood_counts: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+    
+    for mood in all_moods {
+        *mood_counts.entry(mood.mood).or_insert(0) += 1;
+    }
+
+    let result: Vec<(String, i64)> = mood_counts.into_iter().collect();
+    Ok(result)
 }
