@@ -49,7 +49,7 @@ pub fn mood_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sqlite
             get(mood_handler::get_recent_moods_handler)
         )
         
-        // Special Operations
+        // Basic Statistics
         .route(
             "/moods/stats",
             get(mood_handler::get_mood_stats_handler)
@@ -57,5 +57,19 @@ pub fn mood_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sqlite
         .route(
             "/moods/streak",
             get(mood_handler::get_mood_streak_handler)
+        )
+        
+        // NEW: Analytics Routes
+        .route(
+            "/moods/analytics/average",
+            get(mood_handler::get_average_mood_handler)
+        )
+        .route(
+            "/moods/analytics/trend",
+            get(mood_handler::get_mood_trend_handler)
+        )
+        .route(
+            "/moods/analytics/distribution",
+            get(mood_handler::get_mood_distribution_handler)
         )
 }
