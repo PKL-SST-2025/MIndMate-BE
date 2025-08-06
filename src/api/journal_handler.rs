@@ -13,7 +13,8 @@ use crate::{
     service::journal_service::{
         create_journal, get_journal_by_id, get_user_journals, get_journal_by_date,
         get_journals_by_date_range, update_journal, delete_journal, get_recent_journals,
-        get_journal_stats_count, get_all_user_journals, search_journals
+        get_journal_stats_count, get_all_user_journals, search_journals, get_journal_advanced_stats,
+        get_journal_simple_stats, get_journal_streak, get_journals_for_streak_analysis
     },
 };
 
@@ -28,8 +29,8 @@ pub struct PaginationQuery {
 
 #[derive(Deserialize)]
 pub struct DateRangeQuery {
-    pub start_date: NaiveDate,
-    pub end_date: NaiveDate,
+    pub start_date: String, // Changed to String to handle mm-dd-yyyy format
+    pub end_date: String,   // Changed to String to handle mm-dd-yyyy format
 }
 
 #[derive(Deserialize)]
@@ -38,10 +39,21 @@ pub struct RecentQuery {
 }
 
 #[derive(Deserialize)]
+pub struct StreakAnalysisQuery {
+    pub days: Option<i32>,
+}
+
+#[derive(Deserialize)]
 pub struct SearchQuery {
     pub query: String,
     pub limit: Option<i32>,
     pub offset: Option<i32>,
+}
+
+/// Helper function to parse date in mm-dd-yyyy format
+fn parse_date_mmddyyyy(date_str: &str) -> Result<NaiveDate, AppError> {
+    NaiveDate::parse_from_str(date_str, "%m-%d-%Y")
+        .map_err(|_| AppError::BadRequest("Invalid date format. Use MM-DD-YYYY".to_string()))
 }
 
 /// Handler untuk membuat journal baru
@@ -55,12 +67,16 @@ pub async fn create_journal_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
+    // Validate that created_at is provided (required field now)
+    let created_at = data.created_at
+        .ok_or_else(|| AppError::BadRequest("created_at date is required".to_string()))?;
+
     let journal_response = create_journal(
         &pool,
         user_id,
         &data.title,
         &data.content,
-        data.created_at,
+        Some(created_at), // Always pass Some since it's required
     )?;
 
     Ok(Json(journal_response))
@@ -96,7 +112,7 @@ pub async fn get_user_journals_handler(
     Ok(Json(journals))
 }
 
-/// Handler untuk mengambil journal berdasarkan tanggal
+/// Handler untuk mengambil journal berdasarkan tanggal (format mm-dd-yyyy)
 pub async fn get_journal_by_date_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -107,14 +123,13 @@ pub async fn get_journal_by_date_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
-    let parsed_date = NaiveDate::parse_from_str(&date, "%m-%d-%Y")
-        .map_err(|_| AppError::BadRequest("Invalid date format. Use MM-DD-YYYY".to_string()))?;
+    let parsed_date = parse_date_mmddyyyy(&date)?;
 
     let journal_response = get_journal_by_date(&pool, user_id, parsed_date)?;
     Ok(Json(journal_response))
 }
 
-/// Handler untuk mengambil journal dalam rentang tanggal
+/// Handler untuk mengambil journal dalam rentang tanggal (format mm-dd-yyyy)
 pub async fn get_journals_by_date_range_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -125,7 +140,10 @@ pub async fn get_journals_by_date_range_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
-    let journals = get_journals_by_date_range(&pool, user_id, range.start_date, range.end_date)?;
+    let start_date = parse_date_mmddyyyy(&range.start_date)?;
+    let end_date = parse_date_mmddyyyy(&range.end_date)?;
+
+    let journals = get_journals_by_date_range(&pool, user_id, start_date, end_date)?;
     Ok(Json(journals))
 }
 
@@ -175,7 +193,7 @@ pub async fn get_recent_journals_handler(
     Ok(Json(journals))
 }
 
-/// Handler untuk mendapatkan statistik journal sederhana
+/// Handler untuk mendapatkan statistik journal sederhana (backwards compatibility)
 pub async fn get_journal_stats_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -189,6 +207,52 @@ pub async fn get_journal_stats_handler(
     Ok(Json(serde_json::json!({
         "total_entries": count
     })))
+}
+
+/// Handler untuk mendapatkan statistik journal simple
+pub async fn get_journal_simple_stats_handler(
+    State(pool): State<DbPool>,
+    user: AuthenticatedUser,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id: i32 = user
+        .user_id()
+        .parse()
+        .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
+
+    let count = get_journal_simple_stats(&pool, user_id)?;
+    Ok(Json(serde_json::json!({
+        "total_entries": count
+    })))
+}
+
+/// Handler untuk mendapatkan streak journal saja
+pub async fn get_journal_streak_handler(
+    State(pool): State<DbPool>,
+    user: AuthenticatedUser,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id: i32 = user
+        .user_id()
+        .parse()
+        .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
+
+    let streak = get_journal_streak(&pool, user_id)?;
+    Ok(Json(serde_json::json!({
+        "current_streak": streak
+    })))
+}
+
+/// Handler untuk mendapatkan statistik journal advanced dengan streak
+pub async fn get_journal_advanced_stats_handler(
+    State(pool): State<DbPool>,
+    user: AuthenticatedUser,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id: i32 = user
+        .user_id()
+        .parse()
+        .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
+
+    let stats = get_journal_advanced_stats(&pool, user_id)?;
+    Ok(Json(stats))
 }
 
 /// Handler untuk mendapatkan SEMUA journal user tanpa pagination
@@ -217,5 +281,20 @@ pub async fn search_journals_handler(
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
     let journals = search_journals(&pool, user_id, &search.query, search.limit, search.offset)?;
+    Ok(Json(journals))
+}
+
+/// Handler untuk mendapatkan journals untuk analisis streak
+pub async fn get_journals_for_streak_handler(
+    State(pool): State<DbPool>,
+    user: AuthenticatedUser,
+    Query(query): Query<StreakAnalysisQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id: i32 = user
+        .user_id()
+        .parse()
+        .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
+
+    let journals = get_journals_for_streak_analysis(&pool, user_id, query.days)?;
     Ok(Json(journals))
 }

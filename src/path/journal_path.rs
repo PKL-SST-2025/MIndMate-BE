@@ -14,6 +14,21 @@ pub fn journal_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sql
             "/journals/stats",
             get(journal_handler::get_journal_stats_handler)
         )
+        // NEW: Simple stats route (using the previously unused function)
+        .route(
+            "/journals/stats/simple",
+            get(journal_handler::get_journal_simple_stats_handler)
+        )
+        // NEW: Streak-only endpoint (using the previously unused get_journals_for_streak)
+        .route(
+            "/journals/streak",
+            get(journal_handler::get_journal_streak_handler)
+        )
+        // Advanced stats route with streak calculation
+        .route(
+            "/journals/stats/advanced",
+            get(journal_handler::get_journal_advanced_stats_handler)
+        )
         .route(
             "/journals/search",
             get(journal_handler::search_journals_handler)
@@ -21,6 +36,11 @@ pub fn journal_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sql
         .route(
             "/journals/recent",
             get(journal_handler::get_recent_journals_handler)
+        )
+        // NEW: Route untuk mendapatkan journals untuk streak analysis (using get_journals_for_streak)
+        .route(
+            "/journals/streak-analysis",
+            get(journal_handler::get_journals_for_streak_handler)
         )
 
         // CRUD Operations
