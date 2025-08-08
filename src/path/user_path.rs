@@ -21,4 +21,8 @@ pub fn user_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sqlite
             "/users",
             get(user_handler::get_all_users_handler)
         )
+        .route(
+            "/user/check-email",
+            get(user_handler::check_email_handler)
+        )
 }
