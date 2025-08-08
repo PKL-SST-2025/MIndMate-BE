@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use crate::{
     errors::app_error::AppError,
     middleware::auth_middleware::AuthenticatedUser,
-    service::user_service::{get_user_by_id, edit_profile, change_password, get_all_users, check_email_exists},
+    service::user_service::{get_user_by_id, edit_profile, change_password, get_all_users, check_email_exists, reset_password},
 };
 
 // Type alias agar lebih singkat
@@ -127,4 +127,48 @@ pub async fn check_email_handler_post(
 
     let result = check_email_exists(&pool, email)?;
     Ok(Json(result))
+}
+
+/// Request body untuk reset password (lupa password)
+#[derive(Deserialize)]
+pub struct ResetPasswordRequest {
+    pub email: String,
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+/// Handler untuk reset password setelah verifikasi email
+/// POST /user/reset-password dengan body: {"email": "example@email.com", "new_password": "newpass123", "confirm_password": "newpass123"}
+pub async fn reset_password_handler(
+    State(pool): State<DbPool>,
+    Json(data): Json<ResetPasswordRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let email = data.email.trim();
+    let new_password = data.new_password.trim();
+    let confirm_password = data.confirm_password.trim();
+
+    // Basic validation
+    if email.is_empty() {
+        return Err(AppError::BadRequest("Email cannot be empty".to_string()));
+    }
+    
+    if !email.contains('@') || !email.contains('.') {
+        return Err(AppError::BadRequest("Invalid email format".to_string()));
+    }
+
+    if new_password.is_empty() {
+        return Err(AppError::BadRequest("New password cannot be empty".to_string()));
+    }
+
+    if new_password.len() < 6 {
+        return Err(AppError::BadRequest("Password must be at least 6 characters long".to_string()));
+    }
+
+    if new_password != confirm_password {
+        return Err(AppError::BadRequest("Passwords do not match".to_string()));
+    }
+
+    // Reset password
+    reset_password(&pool, email, new_password)?;
+    Ok(Json("Password reset successfully"))
 }
