@@ -9,17 +9,16 @@ use chrono::NaiveDate;
 use crate::{
     errors::app_error::AppError,
     middleware::auth_middleware::AuthenticatedUser,
-    models::mood::{CreateMoodRequest, UpdateMoodRequest, TrendQuery, AnalyticsQuery},
+    models::mood::{CreateMoodRequest, UpdateMoodRequest},
     service::mood_service::{
         create_mood, get_mood_by_id, get_user_moods, get_mood_by_date,
         get_moods_by_date_range, update_mood, delete_mood, get_recent_moods, 
         get_mood_stats_count, get_mood_streak,
-        get_all_user_moods, get_mood_stats_with_scores,
-        // NEW analytics functions
-        get_average_mood, get_mood_trend, get_mood_distribution
+        get_all_user_moods, get_mood_stats_with_scores // NEW functions added
     },
 };
 
+// Type alias agar lebih singkat
 type DbPool = r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>;
 
 #[derive(Deserialize)]
@@ -29,9 +28,32 @@ pub struct PaginationQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(try_from = "DateRangeQueryRaw")]
 pub struct DateRangeQuery {
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
+}
+
+#[derive(Deserialize)]
+struct DateRangeQueryRaw {
+    pub start_date: String,
+    pub end_date: String,
+}
+
+impl TryFrom<DateRangeQueryRaw> for DateRangeQuery {
+    type Error = AppError;
+
+    fn try_from(raw: DateRangeQueryRaw) -> Result<Self, Self::Error> {
+        let start_date = NaiveDate::parse_from_str(&raw.start_date, "%m-%d-%Y")
+            .map_err(|_| AppError::BadRequest("Invalid start_date format. Use MM-DD-YYYY".to_string()))?;
+        let end_date = NaiveDate::parse_from_str(&raw.end_date, "%m-%d-%Y")
+            .map_err(|_| AppError::BadRequest("Invalid end_date format. Use MM-DD-YYYY".to_string()))?;
+        
+        Ok(DateRangeQuery {
+            start_date,
+            end_date,
+        })
+    }
 }
 
 #[derive(Deserialize)]
@@ -56,7 +78,7 @@ pub async fn create_mood_handler(
         &data.mood,
         &data.emoji,
         data.notes,
-        data.date,
+        None, // Date will be auto-generated
     )?;
 
     Ok(Json(mood_response))
@@ -103,8 +125,8 @@ pub async fn get_mood_by_date_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
-    let parsed_date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-        .map_err(|_| AppError::BadRequest("Invalid date format. Use YYYY-MM-DD".to_string()))?;
+    let parsed_date = NaiveDate::parse_from_str(&date, "%m-%d-%Y")
+        .map_err(|_| AppError::BadRequest("Invalid date format. Use MM-DD-YYYY".to_string()))?;
 
     let mood_response = get_mood_by_date(&pool, user_id, parsed_date)?;
     Ok(Json(mood_response))
@@ -203,7 +225,8 @@ pub async fn get_mood_streak_handler(
     })))
 }
 
-/// Handler untuk mendapatkan SEMUA mood user tanpa pagination
+/// NEW: Handler untuk mendapatkan SEMUA mood user tanpa pagination
+/// USES get_all_user_moods function
 pub async fn get_all_moods_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -217,7 +240,8 @@ pub async fn get_all_moods_handler(
     Ok(Json(moods))
 }
 
-/// Handler untuk mendapatkan statistik mood dengan scores
+/// NEW: Handler untuk mendapatkan statistik mood dengan scores
+/// USES get_mood_stats_with_scores function (which uses score() method)
 pub async fn get_advanced_mood_stats_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -229,51 +253,4 @@ pub async fn get_advanced_mood_stats_handler(
 
     let stats = get_mood_stats_with_scores(&pool, user_id)?;
     Ok(Json(stats))
-}
-
-// NEW: Handler untuk mendapatkan rata-rata mood
-/// GET /moods/analytics/average
-pub async fn get_average_mood_handler(
-    State(pool): State<DbPool>,
-    user: AuthenticatedUser,
-) -> Result<impl IntoResponse, AppError> {
-    let user_id: i32 = user
-        .user_id()
-        .parse()
-        .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
-
-    let average_mood = get_average_mood(&pool, user_id)?;
-    Ok(Json(average_mood))
-}
-
-// NEW: Handler untuk mendapatkan trend mood (untuk grafik)
-/// GET /moods/analytics/trend?days=30&group_by=week
-pub async fn get_mood_trend_handler(
-    State(pool): State<DbPool>,
-    user: AuthenticatedUser,
-    Query(query): Query<TrendQuery>,
-) -> Result<impl IntoResponse, AppError> {
-    let user_id: i32 = user
-        .user_id()
-        .parse()
-        .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
-
-    let trend = get_mood_trend(&pool, user_id, query.days, query.group_by)?;
-    Ok(Json(trend))
-}
-
-// NEW: Handler untuk mendapatkan distribusi mood (untuk grafik pie/bar)
-/// GET /moods/analytics/distribution?period=month
-pub async fn get_mood_distribution_handler(
-    State(pool): State<DbPool>,
-    user: AuthenticatedUser,
-    Query(query): Query<AnalyticsQuery>,
-) -> Result<impl IntoResponse, AppError> {
-    let user_id: i32 = user
-        .user_id()
-        .parse()
-        .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
-
-    let distribution = get_mood_distribution(&pool, user_id, query.period)?;
-    Ok(Json(distribution))
 }
