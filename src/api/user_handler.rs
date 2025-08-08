@@ -83,9 +83,15 @@ pub async fn get_all_users_handler(
     Ok(Json(users))
 }
 
-/// Handler untuk mengecek ketersediaan email
-/// Menggunakan query parameter: GET /user/check-email?email=example@email.com
-pub async fn check_email_handler(
+/// Request body untuk check email
+#[derive(Deserialize)]
+pub struct CheckEmailRequest {
+    pub email: String,
+}
+
+/// Handler untuk mengecek ketersediaan email via GET query parameter
+/// GET /user/check-email?email=example@email.com
+pub async fn check_email_handler_get(
     State(pool): State<DbPool>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -94,6 +100,27 @@ pub async fn check_email_handler(
         .ok_or_else(|| AppError::BadRequest("Email parameter is required".to_string()))?;
 
     // Basic email format validation (optional)
+    if !email.contains('@') || !email.contains('.') {
+        return Err(AppError::BadRequest("Invalid email format".to_string()));
+    }
+
+    let result = check_email_exists(&pool, email)?;
+    Ok(Json(result))
+}
+
+/// Handler untuk mengecek ketersediaan email via POST body
+/// POST /user/check-email dengan body: {"email": "example@email.com"}
+pub async fn check_email_handler_post(
+    State(pool): State<DbPool>,
+    Json(data): Json<CheckEmailRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let email = data.email.trim();
+
+    // Basic email format validation
+    if email.is_empty() {
+        return Err(AppError::BadRequest("Email cannot be empty".to_string()));
+    }
+    
     if !email.contains('@') || !email.contains('.') {
         return Err(AppError::BadRequest("Invalid email format".to_string()));
     }
