@@ -28,9 +28,32 @@ pub struct PaginationQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(try_from = "DateRangeQueryRaw")]
 pub struct DateRangeQuery {
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
+}
+
+#[derive(Deserialize)]
+struct DateRangeQueryRaw {
+    pub start_date: String,
+    pub end_date: String,
+}
+
+impl TryFrom<DateRangeQueryRaw> for DateRangeQuery {
+    type Error = AppError;
+
+    fn try_from(raw: DateRangeQueryRaw) -> Result<Self, Self::Error> {
+        let start_date = NaiveDate::parse_from_str(&raw.start_date, "%m-%d-%Y")
+            .map_err(|_| AppError::BadRequest("Invalid start_date format. Use MM-DD-YYYY".to_string()))?;
+        let end_date = NaiveDate::parse_from_str(&raw.end_date, "%m-%d-%Y")
+            .map_err(|_| AppError::BadRequest("Invalid end_date format. Use MM-DD-YYYY".to_string()))?;
+        
+        Ok(DateRangeQuery {
+            start_date,
+            end_date,
+        })
+    }
 }
 
 #[derive(Deserialize)]
@@ -55,7 +78,7 @@ pub async fn create_mood_handler(
         &data.mood,
         &data.emoji,
         data.notes,
-        data.date,
+        None, // Date will be auto-generated
     )?;
 
     Ok(Json(mood_response))
@@ -102,8 +125,8 @@ pub async fn get_mood_by_date_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
-    let parsed_date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-        .map_err(|_| AppError::BadRequest("Invalid date format. Use YYYY-MM-DD".to_string()))?;
+    let parsed_date = NaiveDate::parse_from_str(&date, "%m-%d-%Y")
+        .map_err(|_| AppError::BadRequest("Invalid date format. Use MM-DD-YYYY".to_string()))?;
 
     let mood_response = get_mood_by_date(&pool, user_id, parsed_date)?;
     Ok(Json(mood_response))

@@ -32,6 +32,7 @@ pub struct NewMood {
 pub struct MoodResponse {
     pub id: i32,
     pub user_id: i32,
+    #[serde(serialize_with = "serialize_date")]
     pub date: chrono::NaiveDate,
     pub mood: String,
     pub emoji: String,
@@ -40,12 +41,19 @@ pub struct MoodResponse {
     pub updated_at: NaiveDateTime, 
 }
 
+fn serialize_date<S>(date: &chrono::NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let formatted = date.format("%m-%d-%Y").to_string();
+    serializer.serialize_str(&formatted)
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CreateMoodRequest {
     pub mood: String,
     pub emoji: String,
     pub notes: Option<String>,
-    pub date: Option<chrono::NaiveDate>,
 }
 
 #[derive(Debug, Deserialize)]
