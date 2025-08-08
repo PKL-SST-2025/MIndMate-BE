@@ -52,6 +52,7 @@ diesel::table! {
         password -> Text,
         age -> Nullable<Integer>,
         gender -> Nullable<Text>,
+        avatar -> Nullable<Text>, 
         settings -> Nullable<Text>,
         created_at -> Timestamp,
         updated_at -> Timestamp,

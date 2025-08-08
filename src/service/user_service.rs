@@ -31,6 +31,7 @@ pub fn get_user_by_id(
         password: user.password,
         age: user.age,
         gender: user.gender,
+        avatar: user.avatar, // Tambahan field avatar
         settings: user.settings.clone(),
         created_at: user.created_at,
         updated_at: user.updated_at,
@@ -44,6 +45,7 @@ pub fn edit_profile(
     new_email: &str,
     new_age: Option<i32>,
     new_gender: Option<String>,
+    new_avatar: Option<String>, // Tambahan parameter avatar
 ) -> Result<UserResponse, AppError> {
     let mut conn = pool
         .get()
@@ -71,8 +73,8 @@ pub fn edit_profile(
         }
     }
 
-    // Update user with new age and gender
-    let updated_user = user_query::update_user_profile(&mut conn, user_id, new_username, new_email, new_age, new_gender)?;
+    // Update user dengan tambahan avatar parameter
+    let updated_user = user_query::update_user_profile(&mut conn, user_id, new_username, new_email, new_age, new_gender, new_avatar)?;
 
     Ok(UserResponse {
         id: updated_user.id,
@@ -81,6 +83,7 @@ pub fn edit_profile(
         password: updated_user.password,
         age: updated_user.age,
         gender: updated_user.gender,
+        avatar: updated_user.avatar, // Tambahan field avatar
         settings: updated_user.settings.clone(),
         created_at: updated_user.created_at,
         updated_at: updated_user.updated_at,
@@ -143,7 +146,7 @@ pub fn get_all_users(
 
     let users = user_query::get_all_users(&mut conn)?;
 
-    // Map User to UserResponse
+    // Map User to UserResponse dengan tambahan avatar
     let user_responses = users.into_iter().map(|user| UserResponse {
         id: user.id,
         username: user.username,
@@ -151,6 +154,7 @@ pub fn get_all_users(
         password: user.password,
         age: user.age,
         gender: user.gender,
+        avatar: user.avatar, // Tambahan field avatar
         settings: user.settings.clone(),
         created_at: user.created_at,
         updated_at: user.updated_at,

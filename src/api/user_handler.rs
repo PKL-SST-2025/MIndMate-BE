@@ -29,13 +29,14 @@ pub async fn get_profile(
     Ok(Json(user_data))
 }
 
-/// Request body untuk edit profil
+/// Request body untuk edit profil - ditambahkan avatar
 #[derive(Deserialize)]
 pub struct EditProfileRequest {
     pub username: String,
     pub email: String,
     pub age: Option<i32>,
     pub gender: Option<String>,
+    pub avatar: Option<String>, // Tambahan field avatar
 }
 
 /// Handler untuk mengedit profil pengguna
@@ -49,7 +50,7 @@ pub async fn edit_profile_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
-    edit_profile(&pool, user_id, &data.username, &data.email, data.age, data.gender)?;
+    edit_profile(&pool, user_id, &data.username, &data.email, data.age, data.gender, data.avatar)?;
     Ok(Json("Profile updated successfully"))
 }
 

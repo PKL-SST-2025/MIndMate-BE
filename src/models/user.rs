@@ -12,12 +12,13 @@ pub struct User {
     pub password: String,
     pub age: Option<i32>,
     pub gender: Option<String>,
+    pub avatar: Option<String>, 
     pub settings: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Insertable, Debug, Deserialize)] // Tambahkan Deserialize
+#[derive(Insertable, Debug, Deserialize)]
 #[diesel(table_name = crate::schema::users)]
 pub struct NewUser {
     pub username: String,
@@ -38,6 +39,7 @@ pub struct UserResponse {
     pub password: String,
     pub age: Option<i32>,
     pub gender: Option<String>,
+    pub avatar: Option<String>,
     pub settings: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,

@@ -77,6 +77,7 @@ pub fn find_user_by_username(
         })
 }
 
+// Modifikasi function untuk include avatar parameter
 pub fn update_user_profile(
     conn: &mut SqliteConnection,
     user_id: i32,
@@ -84,6 +85,7 @@ pub fn update_user_profile(
     new_email: &str,
     new_age: Option<i32>,
     new_gender: Option<String>,
+    new_avatar: Option<String>, // Tambahan parameter avatar
 ) -> Result<User, AppError> {
     diesel::update(users::table.filter(users::id.eq(user_id)))
         .set((
@@ -91,6 +93,7 @@ pub fn update_user_profile(
             users::email.eq(new_email),
             users::age.eq(new_age),
             users::gender.eq(new_gender),
+            users::avatar.eq(new_avatar), // Update avatar field
             users::updated_at.eq(Utc::now().naive_utc()),
         ))
         .execute(conn)
