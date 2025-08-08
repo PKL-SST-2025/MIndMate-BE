@@ -1,4 +1,4 @@
-use axum::{Router, routing::{get, put}};
+use axum::{Router, routing::{get, put, post}};
 use diesel::SqliteConnection;
 use diesel::r2d2;
 use crate::api::user_handler;
@@ -23,6 +23,10 @@ pub fn user_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sqlite
         )
         .route(
             "/user/check-email",
-            get(user_handler::check_email_handler)
+            get(user_handler::check_email_handler_get)
+        )
+        .route(
+            "/user/check-email",
+            post(user_handler::check_email_handler_post)
         )
 }
