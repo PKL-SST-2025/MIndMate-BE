@@ -4,6 +4,14 @@ use crate::errors::app_error::AppError;
 use diesel::r2d2;
 use diesel::SqliteConnection;
 use bcrypt::{hash, verify, DEFAULT_COST};
+use serde::Serialize;
+
+// Response struct for email check
+#[derive(Serialize)]
+pub struct EmailCheckResponse {
+    pub exists: bool,
+    pub message: String,
+}
 
 pub fn get_user_by_id(
     pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
@@ -149,4 +157,26 @@ pub fn get_all_users(
     }).collect();
 
     Ok(user_responses)
+}
+
+// New function to check if email exists
+pub fn check_email_exists(
+    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    email: &str,
+) -> Result<EmailCheckResponse, AppError> {
+    let mut conn = pool
+        .get()
+        .map_err(|_| AppError::InternalServerError("Failed to get DB connection".to_string()))?;
+
+    match user_query::find_user_by_email(&mut conn, email) {
+        Ok(_) => Ok(EmailCheckResponse {
+            exists: true,
+            message: "Email already exists in database".to_string(),
+        }),
+        Err(AppError::NotFound(_)) => Ok(EmailCheckResponse {
+            exists: false,
+            message: "Email is available".to_string(),
+        }),
+        Err(e) => Err(e),
+    }
 }
