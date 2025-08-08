@@ -159,7 +159,7 @@ pub fn get_all_users(
     Ok(user_responses)
 }
 
-// New function to check if email exists
+// Function to check if email exists - untuk forgot password flow
 pub fn check_email_exists(
     pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
     email: &str,
@@ -171,12 +171,36 @@ pub fn check_email_exists(
     match user_query::find_user_by_email(&mut conn, email) {
         Ok(_) => Ok(EmailCheckResponse {
             exists: true,
-            message: "Email already exists in database".to_string(),
+            message: "Email exists in database - you can proceed to reset password".to_string(),
         }),
         Err(AppError::NotFound(_)) => Ok(EmailCheckResponse {
             exists: false,
-            message: "Email is available".to_string(),
+            message: "Email not found in database".to_string(),
         }),
         Err(e) => Err(e),
     }
+}
+
+// New function to reset password by email (for forgot password)
+pub fn reset_password(
+    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    email: &str,
+    new_password: &str,
+) -> Result<(), AppError> {
+    let mut conn = pool
+        .get()
+        .map_err(|_| AppError::InternalServerError("Failed to get DB connection".to_string()))?;
+
+    // First, check if user exists with this email
+    let user = user_query::find_user_by_email(&mut conn, email)
+        .map_err(|_| AppError::NotFound("Email not found in database".to_string()))?;
+
+    // Hash the new password
+    let hashed_new_password = hash(new_password, DEFAULT_COST)
+        .map_err(|_| AppError::InternalServerError("Failed to hash password".to_string()))?;
+
+    // Update password using user ID
+    user_query::update_user_password(&mut conn, user.id, &hashed_new_password)?;
+
+    Ok(())
 }

@@ -29,4 +29,8 @@ pub fn user_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sqlite
             "/user/check-email",
             post(user_handler::check_email_handler_post)
         )
+        .route(
+            "/user/reset-password",
+            post(user_handler::reset_password_handler)
+        )
 }
