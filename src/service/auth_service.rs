@@ -81,6 +81,7 @@ pub fn login_user(
             password: user.password,
             age: user.age,
             gender: user.gender,
+            avatar: user.avatar, // Tambahan field avatar
             settings: user.settings.clone(),
             created_at: user.created_at,
             updated_at: user.updated_at,
