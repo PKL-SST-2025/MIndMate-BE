@@ -1,14 +1,15 @@
 use axum::{
-    extract::{State, Json},
+    extract::{State, Json, Query},
     response::IntoResponse,
 };
 use diesel::{r2d2, SqliteConnection};
 use serde::Deserialize;
+use std::collections::HashMap;
 
 use crate::{
     errors::app_error::AppError,
     middleware::auth_middleware::AuthenticatedUser,
-    service::user_service::{get_user_by_id, edit_profile, change_password, get_all_users},
+    service::user_service::{get_user_by_id, edit_profile, change_password, get_all_users, check_email_exists},
 };
 
 // Type alias agar lebih singkat
@@ -80,4 +81,23 @@ pub async fn get_all_users_handler(
 ) -> Result<impl IntoResponse, AppError> {
     let users = get_all_users(&pool)?;
     Ok(Json(users))
+}
+
+/// Handler untuk mengecek ketersediaan email
+/// Menggunakan query parameter: GET /user/check-email?email=example@email.com
+pub async fn check_email_handler(
+    State(pool): State<DbPool>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<impl IntoResponse, AppError> {
+    let email = params
+        .get("email")
+        .ok_or_else(|| AppError::BadRequest("Email parameter is required".to_string()))?;
+
+    // Basic email format validation (optional)
+    if !email.contains('@') || !email.contains('.') {
+        return Err(AppError::BadRequest("Invalid email format".to_string()));
+    }
+
+    let result = check_email_exists(&pool, email)?;
+    Ok(Json(result))
 }
