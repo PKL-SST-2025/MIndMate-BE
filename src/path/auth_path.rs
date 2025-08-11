@@ -8,4 +8,7 @@ pub fn auth_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<Sqlite
         .route("/auth/register", axum::routing::post(auth_handler::register))
         .route("/auth/login", axum::routing::post(auth_handler::login))
         .route("/auth/logout", axum::routing::post(auth_handler::logout))
+        // Google OAuth routes
+        .route("/auth/google", axum::routing::get(auth_handler::google_auth_url))
+        .route("/auth/google/callback", axum::routing::get(auth_handler::google_callback))
 }

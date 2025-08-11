@@ -16,8 +16,19 @@ pub struct LoginRequest {
     pub password: String,
 }
 
+#[derive(Deserialize)]
+pub struct GoogleCallbackRequest {
+    pub code: String,
+    pub state: Option<String>,
+}
+
 #[derive(Serialize)]
 pub struct LoginResponse {
     pub token: String,
     pub user: UserResponse,
+}
+
+#[derive(Serialize)]
+pub struct GoogleAuthUrlResponse {
+    pub auth_url: String,
 }

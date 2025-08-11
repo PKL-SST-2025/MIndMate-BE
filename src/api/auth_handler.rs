@@ -1,11 +1,20 @@
 use axum::{
-    extract::{State, Json},
+    extract::{State, Json, Query},
     response::IntoResponse,
     http::HeaderMap,
 };
-use crate::service::auth_service::{register_user, login_user, logout_user};
+use crate::service::{
+    auth_service::{register_user, login_user, logout_user},
+    google_auth_service::{google_login, get_google_auth_url}
+};
 use crate::errors::app_error::AppError;
-use crate::models::auth::{RegisterRequest, LoginRequest, LoginResponse};
+use crate::models::auth::{
+    RegisterRequest, 
+    LoginRequest, 
+    LoginResponse, 
+    GoogleCallbackRequest,
+    GoogleAuthUrlResponse
+};
 use diesel::r2d2;
 use diesel::SqliteConnection;
 use serde_json::json;
@@ -14,7 +23,6 @@ pub async fn register(
     State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
     Json(data): Json<RegisterRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-
     let user = register_user(
         &pool, 
         &data.username,    
@@ -74,5 +82,33 @@ pub async fn logout(
 
     Ok(Json(json!({
         "message": "Successfully logged out"
+    })))
+}
+
+// Google OAuth handlers
+pub async fn google_auth_url() -> Result<impl IntoResponse, AppError> {
+    let auth_url = get_google_auth_url()?;
+    
+    Ok(Json(GoogleAuthUrlResponse {
+        auth_url,
+    }))
+}
+
+pub async fn google_callback(
+    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
+    Query(params): Query<GoogleCallbackRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    // Sekarang menggunakan state parameter untuk validasi keamanan
+    let login_response = google_login(&pool, &params.code, params.state.as_deref()).await?;
+    
+    Ok(Json(json!({
+        "token": login_response.token,
+        "user": login_response.user,
+        "is_new_user": login_response.is_new_user,
+        "message": if login_response.is_new_user {
+            "Account created and logged in successfully"
+        } else {
+            "Logged in successfully"
+        }
     })))
 }
