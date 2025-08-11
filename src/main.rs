@@ -74,8 +74,10 @@ async fn main() {
         .with_state(pool);
 
     // CORS configuration untuk development
+    let local_origin = "http://localhost:5173".parse::<HeaderValue>().unwrap();
+    let vercel_origin = "https://mind-mate-fe.vercel.app".parse::<HeaderValue>().unwrap();
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
+        .allow_origin([local_origin, vercel_origin])
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT])
         .allow_credentials(true);
