@@ -2,11 +2,11 @@ use crate::models::mood::{Mood, MoodResponse, MoodType}; // Now Mood will be use
 use crate::db::mood_query;
 use crate::errors::app_error::AppError;
 use diesel::r2d2;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use chrono::NaiveDate;
 
 pub fn create_mood(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     mood: &str,
     emoji: &str,
@@ -45,7 +45,7 @@ pub fn create_mood(
 }
 
 pub fn get_mood_by_id(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     mood_id: i32,
     user_id: i32,
 ) -> Result<MoodResponse, AppError> {
@@ -74,7 +74,7 @@ pub fn get_mood_by_id(
 }
 
 pub fn get_user_moods(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     limit: Option<i32>,
     offset: Option<i32>,
@@ -100,7 +100,7 @@ pub fn get_user_moods(
 }
 
 pub fn get_mood_by_date(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     date: NaiveDate,
 ) -> Result<MoodResponse, AppError> {
@@ -123,7 +123,7 @@ pub fn get_mood_by_date(
 }
 
 pub fn get_moods_by_date_range(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     start_date: NaiveDate,
     end_date: NaiveDate,
@@ -153,7 +153,7 @@ pub fn get_moods_by_date_range(
 }
 
 pub fn update_mood(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     mood_id: i32,
     user_id: i32,
     new_mood: Option<String>,
@@ -188,7 +188,7 @@ pub fn update_mood(
 }
 
 pub fn delete_mood(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     mood_id: i32,
     user_id: i32,
 ) -> Result<(), AppError> {
@@ -205,7 +205,7 @@ pub fn delete_mood(
 }
 
 pub fn get_recent_moods(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     days: Option<i32>,
 ) -> Result<Vec<MoodResponse>, AppError> {
@@ -236,7 +236,7 @@ pub fn get_recent_moods(
 }
 
 pub fn get_mood_stats_count(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
 ) -> Result<i64, AppError> {
     let mut conn = pool
@@ -247,7 +247,7 @@ pub fn get_mood_stats_count(
 }
 
 pub fn get_mood_streak(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
 ) -> Result<i32, AppError> {
     let mut conn = pool
@@ -279,7 +279,7 @@ pub fn get_mood_streak(
 
 // NEW: Function to get ALL user moods (uses get_all_moods_by_user)
 pub fn get_all_user_moods(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
 ) -> Result<Vec<MoodResponse>, AppError> {
     let mut conn = pool
@@ -305,7 +305,7 @@ pub fn get_all_user_moods(
 
 // NEW: Function to get mood statistics with scores (uses score() method)
 pub fn get_mood_stats_with_scores(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
 ) -> Result<serde_json::Value, AppError> {
     let mut conn = pool

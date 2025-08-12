@@ -7,7 +7,7 @@ use axum::http::{HeaderValue, Method};
 use tokio::time::{sleep, Duration};
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE, ACCEPT};
 use diesel::r2d2;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 
 mod api;
 mod service;
@@ -21,7 +21,7 @@ mod schema;
 mod middleware;
 
 // Background task untuk cleanup expired tokens
-async fn token_cleanup_task(pool: r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>) {
+async fn token_cleanup_task(pool: r2d2::Pool<r2d2::ConnectionManager<PgConnection>>) {
     loop {
         // Jalankan setiap 24 jam
         sleep(Duration::from_secs(24 * 60 * 60)).await;

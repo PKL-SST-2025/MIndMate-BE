@@ -3,7 +3,7 @@ use axum::{
     extract::{FromRequestParts},
     http::{request::Parts},
 };
-use diesel::{r2d2, SqliteConnection};
+use diesel::{r2d2, PgConnection};
 use crate::utils::jwt::validate_token;
 use crate::errors::app_error::AppError;
 
@@ -17,13 +17,13 @@ impl AuthenticatedUser {
 }
 
 #[async_trait]
-impl FromRequestParts<r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>> for AuthenticatedUser
+impl FromRequestParts<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>> for AuthenticatedUser
 {
     type Rejection = AppError;
 
     async fn from_request_parts(
         parts: &mut Parts, 
-        state: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>
+        state: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>
     ) -> Result<Self, Self::Rejection> {
         let auth_header = parts.headers
             .get("Authorization")

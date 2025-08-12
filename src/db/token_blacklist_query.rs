@@ -1,24 +1,21 @@
 use diesel::prelude::*;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use crate::errors::app_error::AppError;
 use crate::schema::token_blacklist;
 use chrono::{NaiveDateTime, Utc};
 
-#[derive(Queryable, Selectable, Insertable, Debug)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::token_blacklist)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
-pub struct BlacklistedToken {
-    pub id: Option<i32>,
+pub struct NewBlacklistedToken {
     pub token: String,
     pub created_at: Option<NaiveDateTime>,
 }
 
 pub fn insert_blacklisted_token(
-    conn: &mut SqliteConnection, 
+    conn: &mut PgConnection, 
     token_str: &str
 ) -> Result<(), AppError> {
-    let blacklisted_token = BlacklistedToken {
-        id: None,
+    let blacklisted_token = NewBlacklistedToken {
         token: token_str.to_string(),
         created_at: Some(Utc::now().naive_utc()),
     };
@@ -32,21 +29,22 @@ pub fn insert_blacklisted_token(
 }
 
 pub fn is_token_blacklisted(
-    conn: &mut SqliteConnection, 
+    conn: &mut PgConnection, 
     token_str: &str
 ) -> Result<bool, AppError> {
-    let result = token_blacklist::table
-        .filter(token_blacklist::token.eq(token_str))
-        .first::<BlacklistedToken>(conn);
-
-    match result {
-        Ok(_) => Ok(true),  // Token found in blacklist
-        Err(diesel::result::Error::NotFound) => Ok(false), // Token not in blacklist
-        Err(e) => Err(AppError::DatabaseError(e.to_string())),
-    }
+    use diesel::dsl::exists;
+    use diesel::select;
+    
+    // Menggunakan exists() untuk efisiensi - tidak perlu load seluruh row
+    select(exists(
+        token_blacklist::table
+            .filter(token_blacklist::token.eq(token_str))
+    ))
+    .get_result(conn)
+    .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-pub fn cleanup_expired_tokens(conn: &mut SqliteConnection, cutoff_date: NaiveDateTime) -> QueryResult<usize> {
+pub fn cleanup_expired_tokens(conn: &mut PgConnection, cutoff_date: NaiveDateTime) -> QueryResult<usize> {
     diesel::delete(
         crate::schema::token_blacklist::table
             .filter(crate::schema::token_blacklist::created_at.lt(cutoff_date))

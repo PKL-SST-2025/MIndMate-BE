@@ -1,9 +1,9 @@
 use axum::{Router, routing::{get, put, post}};
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use diesel::r2d2;
 use crate::api::user_handler;
 
-pub fn user_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>> {
+pub fn user_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>> {
     Router::new()
         .route(
             "/user/profile",

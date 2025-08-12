@@ -16,11 +16,11 @@ use crate::models::auth::{
     GoogleAuthUrlResponse
 };
 use diesel::r2d2;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use serde_json::json;
 
 pub async fn register(
-    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
+    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>>,
     Json(data): Json<RegisterRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let user = register_user(
@@ -47,7 +47,7 @@ pub async fn register(
 }
 
 pub async fn login(
-    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
+    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>>,
     Json(data): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let login_response = login_user(&pool, &data.email, &data.password)?;
@@ -59,7 +59,7 @@ pub async fn login(
 }
 
 pub async fn logout(
-    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
+    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, AppError> {
     // Extract token dari Authorization header
@@ -95,7 +95,7 @@ pub async fn google_auth_url() -> Result<impl IntoResponse, AppError> {
 }
 
 pub async fn google_callback(
-    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>>,
+    State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>>,
     Query(params): Query<GoogleCallbackRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     // Sekarang menggunakan state parameter untuk validasi keamanan

@@ -1,9 +1,9 @@
 use axum::{Router, routing::{get, post, put, delete}};
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use diesel::r2d2;
 use crate::api::mood_handler;
 
-pub fn mood_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>> {
+pub fn mood_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>> {
     Router::new()
         // CRUD Operations
         .route(

@@ -1,5 +1,5 @@
 use diesel::prelude::*;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use crate::models::user::{User, NewUser};
 use crate::errors::app_error::AppError;
 use crate::schema::users;
@@ -7,7 +7,7 @@ use chrono::Utc;
 
 // Function utama yang support semua parameter
 pub fn create_user(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     username: &str,
     email: &str,
     password: &str,
@@ -34,16 +34,18 @@ pub fn create_user(
     // Get the created user
     users::table
         .filter(users::email.eq(email))
+        .select(User::as_select())
         .first(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
 pub fn find_user_by_id(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
 ) -> Result<User, AppError> {
     users::table
         .filter(users::id.eq(user_id))
+        .select(User::as_select())
         .first(conn)
         .map_err(|e| match e {
             diesel::result::Error::NotFound => AppError::NotFound("User not found".to_string()),
@@ -52,11 +54,12 @@ pub fn find_user_by_id(
 }
 
 pub fn find_user_by_email(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     email: &str,
 ) -> Result<User, AppError> {
     users::table
         .filter(users::email.eq(email))
+        .select(User::as_select())
         .first(conn)
         .map_err(|e| match e {
             diesel::result::Error::NotFound => AppError::NotFound("User not found".to_string()),
@@ -65,11 +68,12 @@ pub fn find_user_by_email(
 }
 
 pub fn find_user_by_username(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     username: &str,
 ) -> Result<User, AppError> {
     users::table
         .filter(users::username.eq(username))
+        .select(User::as_select())
         .first(conn)
         .map_err(|e| match e {
             diesel::result::Error::NotFound => AppError::NotFound("User not found".to_string()),
@@ -79,7 +83,7 @@ pub fn find_user_by_username(
 
 // Modifikasi function untuk include avatar parameter
 pub fn update_user_profile(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
     new_username: &str,
     new_email: &str,
@@ -103,7 +107,7 @@ pub fn update_user_profile(
 }
 
 pub fn update_user_password(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
     new_password: &str,
 ) -> Result<(), AppError> {
@@ -119,8 +123,9 @@ pub fn update_user_password(
 }
 
 // New function to get all users
-pub fn get_all_users(conn: &mut SqliteConnection) -> Result<Vec<User>, AppError> {
+pub fn get_all_users(conn: &mut PgConnection) -> Result<Vec<User>, AppError> {
     users::table
+        .select(User::as_select())
         .load::<User>(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }

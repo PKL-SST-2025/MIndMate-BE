@@ -2,11 +2,11 @@ use crate::models::journal::JournalResponse;
 use crate::db::journal_query;
 use crate::errors::app_error::AppError;
 use diesel::r2d2;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use chrono::NaiveDate;
 
 pub fn create_journal(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     title: &str,
     content: &str,
@@ -46,7 +46,7 @@ pub fn create_journal(
 }
 
 pub fn get_journal_by_id(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     journal_id: i32,
     user_id: i32,
 ) -> Result<JournalResponse, AppError> {
@@ -73,7 +73,7 @@ pub fn get_journal_by_id(
 }
 
 pub fn get_user_journals(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     limit: Option<i32>,
     offset: Option<i32>,
@@ -97,7 +97,7 @@ pub fn get_user_journals(
 }
 
 pub fn get_journal_by_date(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     date: NaiveDate,
 ) -> Result<JournalResponse, AppError> {
@@ -118,7 +118,7 @@ pub fn get_journal_by_date(
 }
 
 pub fn get_journals_by_date_range(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     start_date: NaiveDate,
     end_date: NaiveDate,
@@ -146,7 +146,7 @@ pub fn get_journals_by_date_range(
 }
 
 pub fn update_journal(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     journal_id: i32,
     user_id: i32,
     new_title: Option<String>,
@@ -182,7 +182,7 @@ pub fn update_journal(
 }
 
 pub fn delete_journal(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     journal_id: i32,
     user_id: i32,
 ) -> Result<(), AppError> {
@@ -199,7 +199,7 @@ pub fn delete_journal(
 }
 
 pub fn get_recent_journals(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     days: Option<i32>,
 ) -> Result<Vec<JournalResponse>, AppError> {
@@ -228,7 +228,7 @@ pub fn get_recent_journals(
 }
 
 pub fn get_journal_stats_count(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
 ) -> Result<i64, AppError> {
     let mut conn = pool
@@ -239,7 +239,7 @@ pub fn get_journal_stats_count(
 }
 
 pub fn get_all_user_journals(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
 ) -> Result<Vec<JournalResponse>, AppError> {
     let mut conn = pool
@@ -261,7 +261,7 @@ pub fn get_all_user_journals(
 }
 
 pub fn search_journals(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     search_query: &str,
     limit: Option<i32>,

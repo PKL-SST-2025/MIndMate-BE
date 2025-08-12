@@ -3,11 +3,11 @@ use crate::db::{user_query, token_blacklist_query};
 use crate::errors::app_error::AppError;
 use crate::utils::jwt::{generate_token, validate_token};
 use diesel::r2d2;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use bcrypt::{hash, verify, DEFAULT_COST};
 
 pub fn register_user(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     username: &str,
     email: &str,
     password: &str,
@@ -48,7 +48,7 @@ pub fn register_user(
 }
 
 pub fn login_user(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     email: &str,
     password: &str,
 ) -> Result<LoginResponse, AppError> {
@@ -90,7 +90,7 @@ pub fn login_user(
 }
 
 pub fn logout_user(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     token: &str,
 ) -> Result<(), AppError> {
     let mut conn = pool

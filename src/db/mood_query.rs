@@ -1,12 +1,12 @@
 use diesel::prelude::*;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use chrono::{NaiveDate, Utc};
 use crate::models::mood::{Mood, NewMood};
 use crate::errors::app_error::AppError;
 use crate::schema::moods;
 
 pub fn create_mood(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
     mood: &str,
     emoji: &str,
@@ -23,7 +23,7 @@ pub fn create_mood(
         emoji: emoji.to_string(),
         notes,
         created_at: now,
-        updated_at: now, // Changed from Some(now) to now
+        updated_at: Some(now), // Changed back to Some(now)
     };
 
     diesel::insert_into(moods::table)
@@ -41,7 +41,7 @@ pub fn create_mood(
 }
 
 pub fn find_mood_by_id(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     mood_id: i32,
 ) -> Result<Mood, AppError> {
     moods::table
@@ -55,7 +55,7 @@ pub fn find_mood_by_id(
 }
 
 pub fn find_moods_by_user(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
     limit: Option<i32>,
     offset: Option<i32>,
@@ -74,7 +74,7 @@ pub fn find_moods_by_user(
 }
 
 pub fn find_mood_by_user_and_date(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
     date: NaiveDate,
 ) -> Result<Mood, AppError> {
@@ -90,7 +90,7 @@ pub fn find_mood_by_user_and_date(
 }
 
 pub fn find_moods_by_date_range(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
     start_date: NaiveDate,
     end_date: NaiveDate,
@@ -105,7 +105,7 @@ pub fn find_moods_by_date_range(
 }
 
 pub fn update_mood(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     mood_id: i32,
     user_id: i32,
     new_mood: Option<String>,
@@ -133,7 +133,7 @@ pub fn update_mood(
             moods::mood.eq(mood_to_update),
             moods::emoji.eq(emoji_to_update),
             moods::notes.eq(notes_to_update),
-            moods::updated_at.eq(Utc::now().naive_utc()), // Changed from Some(...) to direct value
+            moods::updated_at.eq(Some(Utc::now().naive_utc())), // Wrapped in Some()
         ))
         .execute(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -142,7 +142,7 @@ pub fn update_mood(
 }
 
 pub fn delete_mood(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     mood_id: i32,
     user_id: i32,
 ) -> Result<bool, AppError> {
@@ -158,7 +158,7 @@ pub fn delete_mood(
 }
 
 pub fn get_recent_moods(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
     days: i32,
 ) -> Result<Vec<Mood>, AppError> {
@@ -175,7 +175,7 @@ pub fn get_recent_moods(
 
 // Function to get mood statistics (simplified version using Diesel)
 pub fn get_mood_stats_simple(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
 ) -> Result<i64, AppError> {
     use diesel::dsl::count;
@@ -188,7 +188,7 @@ pub fn get_mood_stats_simple(
 }
 
 pub fn check_mood_exists_for_date(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
     date: NaiveDate,
 ) -> Result<bool, AppError> {
@@ -205,7 +205,7 @@ pub fn check_mood_exists_for_date(
 }
 
 pub fn get_all_moods_by_user(
-    conn: &mut SqliteConnection,
+    conn: &mut PgConnection,
     user_id: i32,
 ) -> Result<Vec<Mood>, AppError> {
     moods::table

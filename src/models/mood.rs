@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Selectable, Debug, Serialize)]
 #[diesel(table_name = crate::schema::moods)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Mood {
     pub id: i32,
     pub user_id: i32,
@@ -13,7 +13,7 @@ pub struct Mood {
     pub emoji: String,
     pub notes: Option<String>,
     pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime, 
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 #[derive(Insertable, Debug, Deserialize)]
@@ -25,7 +25,7 @@ pub struct NewMood {
     pub emoji: String,
     pub notes: Option<String>,
     pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime, // Changed from Option<NaiveDateTime> to NaiveDateTime
+    pub updated_at: Option<NaiveDateTime>
 }
 
 #[derive(Serialize)]
@@ -38,7 +38,7 @@ pub struct MoodResponse {
     pub emoji: String,
     pub notes: Option<String>,
     pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime, 
+    pub updated_at: Option<NaiveDateTime>, // Changed from NaiveDateTime to Option<NaiveDateTime>
 }
 
 fn serialize_date<S>(date: &chrono::NaiveDate, serializer: S) -> Result<S::Ok, S::Error>

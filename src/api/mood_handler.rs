@@ -2,7 +2,7 @@ use axum::{
     extract::{State, Json, Path, Query},
     response::IntoResponse,
 };
-use diesel::{r2d2, SqliteConnection};
+use diesel::{r2d2, PgConnection};
 use serde::Deserialize;
 use chrono::NaiveDate;
 
@@ -19,7 +19,7 @@ use crate::{
 };
 
 // Type alias agar lebih singkat
-type DbPool = r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>;
+type DbPool = r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>;
 
 #[derive(Deserialize)]
 pub struct PaginationQuery {

@@ -2,9 +2,10 @@ use axum::{
     extract::{State, Json, Query},
     response::IntoResponse,
 };
-use diesel::{r2d2, SqliteConnection};
+use diesel::{r2d2, PgConnection};
 use serde::Deserialize;
 use std::collections::HashMap;
+use base64::{Engine as _, engine::general_purpose};
 
 use crate::{
     errors::app_error::AppError,
@@ -13,7 +14,39 @@ use crate::{
 };
 
 // Type alias agar lebih singkat
-type DbPool = r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>;
+type DbPool = r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>;
+
+/// Fungsi untuk validasi avatar (base64 image atau URL)
+pub fn validate_avatar(avatar_data: &str) -> Result<(), String> {
+    // Check jika ini base64 image
+    if avatar_data.starts_with("data:image/") {
+        // Extract base64 part (remove data:image/...;base64, prefix)
+        if let Some(base64_start) = avatar_data.find("base64,") {
+            let base64_data = &avatar_data[base64_start + 7..];
+            
+            // Validate base64
+            if general_purpose::STANDARD.decode(base64_data).is_err() {
+                return Err("Invalid base64 image data".to_string());
+            }
+            
+            // Check size (example: max 5MB base64 ≈ 6.8MB original)
+            if base64_data.len() > 7_000_000 { // ~5MB limit
+                return Err("Image too large. Maximum size is 5MB".to_string());
+            }
+        } else {
+            return Err("Invalid image data format".to_string());
+        }
+    } else if avatar_data.starts_with("http") {
+        // URL validation
+        if avatar_data.len() > 2000 {
+            return Err("Avatar URL too long".to_string());
+        }
+    } else {
+        return Err("Avatar must be either base64 image or URL".to_string());
+    }
+    
+    Ok(())
+}
 
 /// Handler untuk mengambil profil pengguna
 pub async fn get_profile(
@@ -39,7 +72,7 @@ pub struct EditProfileRequest {
     pub avatar: Option<String>, // Tambahan field avatar
 }
 
-/// Handler untuk mengedit profil pengguna
+/// Handler untuk mengedit profil pengguna dengan validasi avatar
 pub async fn edit_profile_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -49,6 +82,14 @@ pub async fn edit_profile_handler(
         .user_id()
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
+
+    // Validate avatar jika ada
+    if let Some(ref avatar) = data.avatar {
+        if !avatar.is_empty() {
+            validate_avatar(avatar)
+                .map_err(|e| AppError::BadRequest(format!("Avatar validation error: {}", e)))?;
+        }
+    }
 
     edit_profile(&pool, user_id, &data.username, &data.email, data.age, data.gender, data.avatar)?;
     Ok(Json("Profile updated successfully"))

@@ -1,5 +1,5 @@
 use axum::Router;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use diesel::r2d2;
 
 pub mod auth_path;
@@ -7,7 +7,7 @@ pub mod user_path;
 pub mod mood_path;
 pub mod journal_path;
 
-pub fn init_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<SqliteConnection>>> {
+pub fn init_routes() -> Router<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>> {
     Router::new()
         .merge(auth_path::auth_routes())
         .merge(user_path::user_routes())

@@ -2,7 +2,7 @@ use crate::models::user::{User, UserResponse};
 use crate::db::user_query;
 use crate::errors::app_error::AppError;
 use diesel::r2d2;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use bcrypt::{hash, verify, DEFAULT_COST};
 use serde::Serialize;
 
@@ -14,7 +14,7 @@ pub struct EmailCheckResponse {
 }
 
 pub fn get_user_by_id(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
 ) -> Result<UserResponse, AppError> {
     let mut conn = pool
@@ -39,7 +39,7 @@ pub fn get_user_by_id(
 }
 
 pub fn edit_profile(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     new_username: &str,
     new_email: &str,
@@ -92,7 +92,7 @@ pub fn edit_profile(
 
 // Function for internal use to get full user data including password hash
 pub fn get_user_full_data(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
 ) -> Result<User, AppError> {
     let mut conn = pool
@@ -106,7 +106,7 @@ pub fn get_user_full_data(
 }
 
 pub fn change_password(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     user_id: i32,
     old_password: &str,
     new_password: &str,
@@ -138,7 +138,7 @@ pub fn change_password(
 
 // New function to get all users
 pub fn get_all_users(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
 ) -> Result<Vec<UserResponse>, AppError> {
     let mut conn = pool
         .get()
@@ -165,7 +165,7 @@ pub fn get_all_users(
 
 // Function to check if email exists - untuk forgot password flow
 pub fn check_email_exists(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     email: &str,
 ) -> Result<EmailCheckResponse, AppError> {
     let mut conn = pool
@@ -187,7 +187,7 @@ pub fn check_email_exists(
 
 // New function to reset password by email (for forgot password)
 pub fn reset_password(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     email: &str,
     new_password: &str,
 ) -> Result<(), AppError> {

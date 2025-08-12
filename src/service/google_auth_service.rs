@@ -3,7 +3,7 @@ use crate::db::user_query;
 use crate::errors::app_error::AppError;
 use crate::utils::jwt::generate_token;
 use diesel::r2d2;
-use diesel::SqliteConnection;
+use diesel::pg::PgConnection;
 use reqwest;
 use url::Url;
 use rand::Rng;
@@ -108,7 +108,7 @@ pub async fn get_user_info(access_token: &str) -> Result<GoogleUserInfo, AppErro
 }
 
 pub async fn google_login(
-    pool: &r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     code: &str,
     _state: Option<&str>, // Menggunakan state untuk validasi
 ) -> Result<GoogleLoginResponse, AppError> {

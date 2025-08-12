@@ -2,10 +2,12 @@
 
 diesel::table! {
     help_requests (id) {
-        id -> Integer,
-        user_id -> Integer,
-        name -> Text,
-        email -> Text,
+        id -> Int4,
+        user_id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
+        #[max_length = 255]
+        email -> Varchar,
         message -> Text,
         created_at -> Timestamp,
     }
@@ -13,9 +15,10 @@ diesel::table! {
 
 diesel::table! {
     journals (id) {
-        id -> Integer,
-        user_id -> Integer,
-        title -> Text,
+        id -> Int4,
+        user_id -> Int4,
+        #[max_length = 500]
+        title -> Varchar,
         content -> Text,
         created_at -> Timestamp,
         updated_at -> Nullable<Timestamp>,
@@ -24,39 +27,56 @@ diesel::table! {
 
 diesel::table! {
     moods (id) {
-        id -> Integer,
-        user_id -> Integer,
+        id -> Int4,
+        user_id -> Int4,
         date -> Date,
-        mood -> Text,
-        emoji -> Text,
+        #[max_length = 50]
+        mood -> Varchar,
+        #[max_length = 10]
+        emoji -> Varchar,
         notes -> Nullable<Text>,
         created_at -> Timestamp,
-        updated_at -> Timestamp,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 
 diesel::table! {
     psychologist_requests (id) {
-        id -> Integer,
-        user_id -> Integer,
-        name -> Text,
-        email -> Text,
+        id -> Int4,
+        user_id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
+        #[max_length = 255]
+        email -> Varchar,
         message -> Text,
-        preferred_time -> Nullable<Text>,
+        #[max_length = 255]
+        preferred_time -> Nullable<Varchar>,
         created_at -> Timestamp,
     }
 }
 
 diesel::table! {
+    token_blacklist (id) {
+        id -> Int4,
+        token -> Text,
+        created_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     users (id) {
-        id -> Integer,
-        username -> Text,
-        email -> Text,
-        password -> Text,
-        age -> Nullable<Integer>,
-        gender -> Nullable<Text>,
-        avatar -> Nullable<Text>, 
+        id -> Int4,
+        #[max_length = 255]
+        username -> Varchar,
+        #[max_length = 255]
+        email -> Varchar,
+        #[max_length = 255]
+        password -> Varchar,
         settings -> Nullable<Text>,
+        age -> Nullable<Int4>,
+        #[max_length = 50]
+        gender -> Nullable<Varchar>,
+        avatar -> Nullable<Text>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -72,14 +92,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     journals,
     moods,
     psychologist_requests,
-    users,
     token_blacklist,
+    users,
 );
-
-diesel::table! {
-    token_blacklist (id) {
-        id -> Nullable<Integer>,
-        token -> Text,
-        created_at -> Nullable<Timestamp>,
-    }
-}

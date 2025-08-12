@@ -30,6 +30,7 @@ FROM debian:bookworm-slim
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -41,7 +42,7 @@ COPY --from=builder /app/target/release/mindmate-be ./mindmate-be
 RUN chmod +x ./mindmate-be
 
 # Expose port (sesuaikan dengan port aplikasi Anda)
-EXPOSE 8000
+EXPOSE 8080
 
 # Health check (opsional)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
