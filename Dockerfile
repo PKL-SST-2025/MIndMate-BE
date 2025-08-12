@@ -1,5 +1,5 @@
 # Multi-stage build untuk optimasi ukuran
-FROM rust:1.75-slim as builder
+FROM rust:latest as builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy manifest files
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 
 # Build dependencies first (untuk caching)
 RUN mkdir src && echo "fn main() {}" > src/main.rs
@@ -41,7 +41,7 @@ COPY --from=builder /app/target/release/mindmate-be ./mindmate-be
 RUN chmod +x ./mindmate-be
 
 # Expose port (sesuaikan dengan port aplikasi Anda)
-EXPOSE 8080
+EXPOSE 8000
 
 # Health check (opsional)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
