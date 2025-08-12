@@ -87,11 +87,16 @@ async fn main() {
         .nest("/api", api_routes)
         .layer(cors);
 
-    // Define address and port to run the server
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    println!("🚀 Server listening on http://{}", addr);
-    println!("📡 All routes available at http://{}/api/...", addr);
-    println!("🧹 Token cleanup task started (runs every 24 hours)");
+    // Railway memberikan PORT lewat environment variable
+    let port: u16 = env::var("PORT")
+    .unwrap_or_else(|_| "8080".to_string()) // fallback kalau di lokal
+    .parse()
+    .expect("PORT must be a number");
+
+    // Bind ke 0.0.0.0 agar bisa diakses dari luar container
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+
+    println!("🚀 Server listening on {}", addr);
 
     // Run the Axum server
     axum::serve(tokio::net::TcpListener::bind(&addr).await.unwrap(), app)
