@@ -110,20 +110,13 @@ pub async fn get_user_info(access_token: &str) -> Result<GoogleUserInfo, AppErro
 pub async fn google_login(
     pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     code: &str,
-    _state: Option<&str>, // Menggunakan state untuk validasi
+    _state: Option<&str>,
 ) -> Result<GoogleLoginResponse, AppError> {
     let config = GoogleOAuthConfig::from_env()?;
     
-    // Validasi state jika diperlukan (untuk security)
-    // Untuk sekarang kita skip validasi state, tapi parameter tetap ada
-    
-    // Exchange code for token
     let token_response = exchange_code_for_token(&config, code).await?;
-    
-    // Get user info from Google
     let google_user = get_user_info(&token_response.access_token).await?;
     
-    // Log informasi user untuk debugging (opsional)
     println!("Google user info: ID={}, Name={}, Email={}, Verified={}", 
              google_user.id, google_user.name, google_user.email, google_user.verified_email);
     
@@ -131,23 +124,17 @@ pub async fn google_login(
         .get()
         .map_err(|_| AppError::InternalServerError("Failed to get DB connection".to_string()))?;
 
-    // Check if user already exists
     let (user, is_new_user) = match user_query::find_user_by_email(&mut conn, &google_user.email) {
         Ok(existing_user) => {
-            // User exists, update avatar if available
             if let Some(_picture) = &google_user.picture {
-                // You might want to add an update_user_avatar function
-                // user_query::update_user_avatar(&mut conn, existing_user.id, picture)?;
                 println!("User {} has profile picture: {}", google_user.email, _picture);
             }
             (existing_user, false)
         },
         Err(_) => {
-            // User doesn't exist, create new user
             let username = generate_username_from_google_user(&google_user);
             let random_password = generate_random_password();
             
-            // Hash the random password (user won't use it for Google login)
             let hashed_password = bcrypt::hash(&random_password, bcrypt::DEFAULT_COST)
                 .map_err(|_| AppError::InternalServerError("Failed to hash password".to_string()))?;
             
@@ -156,9 +143,9 @@ pub async fn google_login(
                 &username,
                 &google_user.email,
                 &hashed_password,
-                None, // age - you might want to prompt for this later
-                None, // gender - you might want to prompt for this later
-                None, // settings
+                None,
+                None,
+                None,
             )?;
             
             println!("Created new user: {} with username: {}", google_user.email, username);
@@ -166,7 +153,6 @@ pub async fn google_login(
         }
     };
 
-    // Generate JWT token
     let jwt_token = generate_token(&user.id.to_string())
         .map_err(|_| AppError::InternalServerError("Failed to generate token".to_string()))?;
 
@@ -200,13 +186,10 @@ fn generate_random_state() -> String {
         .collect()
 }
 
-// Menggunakan informasi lebih lengkap dari Google user untuk generate username
 fn generate_username_from_google_user(google_user: &GoogleUserInfo) -> String {
     let base_username = if let Some(given_name) = &google_user.given_name {
-        // Gunakan given_name jika ada
         given_name.to_lowercase().replace(' ', "")
     } else {
-        // Fallback ke bagian email
         google_user.email.split('@').next().unwrap_or("user").to_string()
     };
     

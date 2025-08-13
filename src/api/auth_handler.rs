@@ -1,6 +1,6 @@
 use axum::{
     extract::{State, Json, Query},
-    response::IntoResponse,
+    response::{IntoResponse, Redirect},
     http::HeaderMap,
 };
 use crate::service::{
@@ -18,6 +18,7 @@ use crate::models::auth::{
 use diesel::r2d2;
 use diesel::pg::PgConnection;
 use serde_json::json;
+use std::env;
 
 pub async fn register(
     State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>>,
@@ -98,17 +99,17 @@ pub async fn google_callback(
     State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>>,
     Query(params): Query<GoogleCallbackRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    // Sekarang menggunakan state parameter untuk validasi keamanan
     let login_response = google_login(&pool, &params.code, params.state.as_deref()).await?;
-    
-    Ok(Json(json!({
-        "token": login_response.token,
-        "user": login_response.user,
-        "is_new_user": login_response.is_new_user,
-        "message": if login_response.is_new_user {
-            "Account created and logged in successfully"
-        } else {
-            "Logged in successfully"
-        }
-    })))
+
+    // Baca env var FRONTEND_URL, fallback ke localhost jika kosong
+    let frontend_base_url = env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+
+    // Buat redirect URL sesuai apakah user baru atau tidak
+    let redirect_url = if login_response.is_new_user {
+        format!("{}/dashboard?welcome=1&token={}", frontend_base_url, login_response.token)
+    } else {
+        format!("{}/dashboard?token={}", frontend_base_url, login_response.token)
+    };
+
+    Ok(Redirect::permanent(&redirect_url))
 }
