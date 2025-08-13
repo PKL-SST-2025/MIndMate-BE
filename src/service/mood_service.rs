@@ -152,28 +152,45 @@ pub fn get_moods_by_date_range(
     Ok(mood_responses)
 }
 
-pub fn update_mood(
+pub fn update_mood_with_date(
     pool: &r2d2::Pool<r2d2::ConnectionManager<PgConnection>>,
     mood_id: i32,
     user_id: i32,
     new_mood: Option<String>,
     new_emoji: Option<String>,
     new_notes: Option<String>,
+    new_date: Option<NaiveDate>, // ✅ TAMBAH PARAMETER DATE
 ) -> Result<MoodResponse, AppError> {
     let mut conn = pool
         .get()
         .map_err(|_| AppError::InternalServerError("Failed to get DB connection".to_string()))?;
 
-    // Validate mood type if provided and USE as_str() method
+    // Validate mood type if provided
     let validated_mood = if let Some(ref mood) = new_mood {
         let mood_type = MoodType::from_str(mood)
             .ok_or_else(|| AppError::BadRequest(format!("Invalid mood type: {}", mood)))?;
-        Some(mood_type.as_str().to_string()) // USE as_str() method
+        Some(mood_type.as_str().to_string())
     } else {
         None
     };
 
-    let updated_mood = mood_query::update_mood(&mut conn, mood_id, user_id, validated_mood, new_emoji, new_notes)?;
+    // ✅ JIKA ADA DATE BARU, CEK DUPLIKASI
+    if let Some(date) = new_date {
+        // Check if another mood exists for this date (excluding current mood)
+        if mood_query::check_mood_exists_for_date_excluding(&mut conn, user_id, date, mood_id)? {
+            return Err(AppError::BadRequest("Another mood already exists for this date".to_string()));
+        }
+    }
+
+    let updated_mood = mood_query::update_mood_with_date(
+        &mut conn, 
+        mood_id, 
+        user_id, 
+        validated_mood, 
+        new_emoji, 
+        new_notes,
+        new_date 
+    )?;
 
     Ok(MoodResponse {
         id: updated_mood.id,

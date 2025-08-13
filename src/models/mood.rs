@@ -1,5 +1,5 @@
 use diesel::prelude::*;
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime}; 
 use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Selectable, Debug, Serialize)]
@@ -38,7 +38,7 @@ pub struct MoodResponse {
     pub emoji: String,
     pub notes: Option<String>,
     pub created_at: NaiveDateTime,
-    pub updated_at: Option<NaiveDateTime>, // Changed from NaiveDateTime to Option<NaiveDateTime>
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 fn serialize_date<S>(date: &chrono::NaiveDate, serializer: S) -> Result<S::Ok, S::Error>
@@ -54,6 +54,7 @@ pub struct CreateMoodRequest {
     pub mood: String,
     pub emoji: String,
     pub notes: Option<String>,
+    pub date: Option<String>, // ✅ Changed from &str to String
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,6 +62,7 @@ pub struct UpdateMoodRequest {
     pub mood: Option<String>,
     pub emoji: Option<String>,
     pub notes: Option<String>,
+    pub date: Option<String>, // ✅ Changed from &str to String
 }
 
 #[derive(Debug, Serialize)]

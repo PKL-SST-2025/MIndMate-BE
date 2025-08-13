@@ -12,13 +12,12 @@ use crate::{
     models::mood::{CreateMoodRequest, UpdateMoodRequest},
     service::mood_service::{
         create_mood, get_mood_by_id, get_user_moods, get_mood_by_date,
-        get_moods_by_date_range, update_mood, delete_mood, get_recent_moods, 
+        get_moods_by_date_range, update_mood_with_date, delete_mood, get_recent_moods, // ✅ Fixed import
         get_mood_stats_count, get_mood_streak,
-        get_all_user_moods, get_mood_stats_with_scores // NEW functions added
+        get_all_user_moods, get_mood_stats_with_scores
     },
 };
 
-// Type alias agar lebih singkat
 type DbPool = r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>;
 
 #[derive(Deserialize)]
@@ -61,7 +60,6 @@ pub struct RecentQuery {
     pub days: Option<i32>,
 }
 
-/// Handler untuk membuat mood baru
 pub async fn create_mood_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -72,19 +70,25 @@ pub async fn create_mood_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
+    let mood_date = if let Some(date_str) = &data.date { // ✅ Fixed borrowing
+        NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+            .map_err(|_| AppError::BadRequest("Invalid date format. Use YYYY-MM-DD".to_string()))?
+    } else {
+        chrono::Utc::now().date_naive()
+    };
+
     let mood_response = create_mood(
         &pool,
         user_id,
         &data.mood,
         &data.emoji,
         data.notes,
-        None, // Date will be auto-generated
+        Some(mood_date), 
     )?;
 
     Ok(Json(mood_response))
 }
 
-/// Handler untuk mengambil mood berdasarkan ID
 pub async fn get_mood_by_id_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -99,7 +103,6 @@ pub async fn get_mood_by_id_handler(
     Ok(Json(mood_response))
 }
 
-/// Handler untuk mengambil semua mood user dengan pagination
 pub async fn get_user_moods_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -114,7 +117,6 @@ pub async fn get_user_moods_handler(
     Ok(Json(moods))
 }
 
-/// Handler untuk mengambil mood berdasarkan tanggal
 pub async fn get_mood_by_date_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -132,7 +134,6 @@ pub async fn get_mood_by_date_handler(
     Ok(Json(mood_response))
 }
 
-/// Handler untuk mengambil mood dalam rentang tanggal
 pub async fn get_moods_by_date_range_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -147,7 +148,6 @@ pub async fn get_moods_by_date_range_handler(
     Ok(Json(moods))
 }
 
-/// Handler untuk mengupdate mood
 pub async fn update_mood_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -159,11 +159,25 @@ pub async fn update_mood_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
-    let updated_mood = update_mood(&pool, mood_id, user_id, data.mood, data.emoji, data.notes)?;
+    let mood_date = if let Some(ref date_str) = data.date { // ✅ Fixed borrowing
+        Some(NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+            .map_err(|_| AppError::BadRequest("Invalid date format. Use YYYY-MM-DD".to_string()))?)
+    } else {
+        None
+    };
+
+    let updated_mood = update_mood_with_date(
+        &pool, 
+        mood_id, 
+        user_id, 
+        data.mood, 
+        data.emoji, 
+        data.notes,
+        mood_date 
+    )?;
     Ok(Json(updated_mood))
 }
 
-/// Handler untuk menghapus mood
 pub async fn delete_mood_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -178,7 +192,6 @@ pub async fn delete_mood_handler(
     Ok(Json("Mood deleted successfully"))
 }
 
-/// Handler untuk mengambil mood terbaru
 pub async fn get_recent_moods_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -193,7 +206,6 @@ pub async fn get_recent_moods_handler(
     Ok(Json(moods))
 }
 
-/// Handler untuk mendapatkan statistik mood sederhana
 pub async fn get_mood_stats_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -209,7 +221,6 @@ pub async fn get_mood_stats_handler(
     })))
 }
 
-/// Handler untuk mendapatkan streak mood
 pub async fn get_mood_streak_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -225,8 +236,6 @@ pub async fn get_mood_streak_handler(
     })))
 }
 
-/// NEW: Handler untuk mendapatkan SEMUA mood user tanpa pagination
-/// USES get_all_user_moods function
 pub async fn get_all_moods_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,
@@ -240,8 +249,6 @@ pub async fn get_all_moods_handler(
     Ok(Json(moods))
 }
 
-/// NEW: Handler untuk mendapatkan statistik mood dengan scores
-/// USES get_mood_stats_with_scores function (which uses score() method)
 pub async fn get_advanced_mood_stats_handler(
     State(pool): State<DbPool>,
     user: AuthenticatedUser,

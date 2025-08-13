@@ -18,7 +18,7 @@ use crate::models::auth::{
 use diesel::r2d2;
 use diesel::pg::PgConnection;
 use serde_json::json;
-use std::env;
+// ✅ Removed unused import
 
 pub async fn register(
     State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>>,
@@ -63,7 +63,6 @@ pub async fn logout(
     State(pool): State<r2d2::Pool<diesel::r2d2::ConnectionManager<PgConnection>>>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, AppError> {
-    // Extract token dari Authorization header
     let auth_header = headers
         .get("Authorization")
         .ok_or_else(|| AppError::Unauthorized("Authorization header missing".to_string()))?;
@@ -78,7 +77,6 @@ pub async fn logout(
 
     let token = &auth_str[7..];
 
-    // Proses logout (validasi token dan blacklist)
     logout_user(&pool, token)?;
 
     Ok(Json(json!({
@@ -86,7 +84,6 @@ pub async fn logout(
     })))
 }
 
-// Google OAuth handlers
 pub async fn google_auth_url() -> Result<impl IntoResponse, AppError> {
     let auth_url = get_google_auth_url()?;
     
@@ -101,7 +98,6 @@ pub async fn google_callback(
 ) -> Result<impl IntoResponse, AppError> {
     let login_response = google_login(&pool, &params.code, params.state.as_deref()).await?;
     
-    // Redirect ke frontend dengan parameter sukses
     let redirect_url = if login_response.is_new_user {
         format!("https://mind-mate-fe.vercel.app/dashboard?welcome=1&token={}", login_response.token)
     } else {

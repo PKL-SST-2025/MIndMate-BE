@@ -23,7 +23,7 @@ pub fn create_mood(
         emoji: emoji.to_string(),
         notes,
         created_at: now,
-        updated_at: Some(now), // Changed back to Some(now)
+        updated_at: Some(now),
     };
 
     diesel::insert_into(moods::table)
@@ -31,7 +31,6 @@ pub fn create_mood(
         .execute(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-    // Get the created mood
     moods::table
         .filter(moods::user_id.eq(user_id))
         .filter(moods::date.eq(mood_date))
@@ -104,15 +103,15 @@ pub fn find_moods_by_date_range(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-pub fn update_mood(
+pub fn update_mood_with_date(
     conn: &mut PgConnection,
     mood_id: i32,
     user_id: i32,
     new_mood: Option<String>,
     new_emoji: Option<String>,
     new_notes: Option<String>,
+    new_date: Option<NaiveDate>,
 ) -> Result<Mood, AppError> {
-    // Check if mood exists and belongs to user
     let existing_mood = moods::table
         .filter(moods::id.eq(mood_id))
         .filter(moods::user_id.eq(user_id))
@@ -123,17 +122,18 @@ pub fn update_mood(
             _ => AppError::DatabaseError(e.to_string()),
         })?;
 
-    // Build update query dynamically
     let mood_to_update = new_mood.unwrap_or(existing_mood.mood);
     let emoji_to_update = new_emoji.unwrap_or(existing_mood.emoji);
     let notes_to_update = if new_notes.is_some() { new_notes } else { existing_mood.notes };
+    let date_to_update = new_date.unwrap_or(existing_mood.date); 
 
     diesel::update(moods::table.filter(moods::id.eq(mood_id)))
         .set((
             moods::mood.eq(mood_to_update),
             moods::emoji.eq(emoji_to_update),
             moods::notes.eq(notes_to_update),
-            moods::updated_at.eq(Some(Utc::now().naive_utc())), // Wrapped in Some()
+            moods::date.eq(date_to_update), 
+            moods::updated_at.eq(Some(Utc::now().naive_utc())),
         ))
         .execute(conn)
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -173,7 +173,6 @@ pub fn get_recent_moods(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-// Function to get mood statistics (simplified version using Diesel)
 pub fn get_mood_stats_simple(
     conn: &mut PgConnection,
     user_id: i32,
@@ -187,6 +186,7 @@ pub fn get_mood_stats_simple(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
+// ✅ Added missing function
 pub fn check_mood_exists_for_date(
     conn: &mut PgConnection,
     user_id: i32,
@@ -199,6 +199,25 @@ pub fn check_mood_exists_for_date(
         moods::table
             .filter(moods::user_id.eq(user_id))
             .filter(moods::date.eq(date))
+    ))
+    .get_result(conn)
+    .map_err(|e| AppError::DatabaseError(e.to_string()))
+}
+
+pub fn check_mood_exists_for_date_excluding(
+    conn: &mut PgConnection,
+    user_id: i32,
+    date: NaiveDate,
+    excluding_mood_id: i32,
+) -> Result<bool, AppError> {
+    use diesel::dsl::exists;
+    use diesel::select;
+    
+    select(exists(
+        moods::table
+            .filter(moods::user_id.eq(user_id))
+            .filter(moods::date.eq(date))
+            .filter(moods::id.ne(excluding_mood_id))
     ))
     .get_result(conn)
     .map_err(|e| AppError::DatabaseError(e.to_string()))
