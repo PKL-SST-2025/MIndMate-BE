@@ -100,16 +100,13 @@ pub async fn google_callback(
     Query(params): Query<GoogleCallbackRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let login_response = google_login(&pool, &params.code, params.state.as_deref()).await?;
-
-    // Baca env var FRONTEND_URL, fallback ke localhost jika kosong
-    let frontend_base_url = env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
-
-    // Buat redirect URL sesuai apakah user baru atau tidak
+    
+    // Redirect ke frontend dengan parameter sukses
     let redirect_url = if login_response.is_new_user {
-        format!("{}/dashboard?welcome=1&token={}", frontend_base_url, login_response.token)
+        format!("https://mind-mate-fe.vercel.app/dashboard?welcome=1&token={}", login_response.token)
     } else {
-        format!("{}/dashboard?token={}", frontend_base_url, login_response.token)
+        format!("https://mind-mate-fe.vercel.app/dashboard?token={}", login_response.token)
     };
-
+    
     Ok(Redirect::permanent(&redirect_url))
 }
