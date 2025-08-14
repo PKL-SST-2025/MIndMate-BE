@@ -154,7 +154,7 @@ pub async fn update_journal_handler(
         user_id, 
         data.title, 
         data.content,
-        data.created_at
+        data.created_at 
     )?;
     Ok(Json(updated_journal))
 }

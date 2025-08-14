@@ -150,7 +150,7 @@ pub fn update_journal(
         .set((
             journals::title.eq(title_to_update),
             journals::content.eq(content_to_update),
-            journals::created_at.eq(created_at_to_update),
+            journals::created_at.eq(created_at_to_update), 
             journals::updated_at.eq(Some(Utc::now().naive_utc())),
         ))
         .execute(conn)
