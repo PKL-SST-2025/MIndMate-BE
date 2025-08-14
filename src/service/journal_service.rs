@@ -151,6 +151,7 @@ pub fn update_journal(
     user_id: i32,
     new_title: Option<String>,
     new_content: Option<String>,
+    new_created_at: Option<String>,
 ) -> Result<JournalResponse, AppError> {
     let mut conn = pool
         .get()
@@ -169,7 +170,22 @@ pub fn update_journal(
         }
     }
 
-    let updated_journal = journal_query::update_journal(&mut conn, journal_id, user_id, new_title, new_content)?;
+    // Parse the date from MM-DD-YYYY format if provided
+    let parsed_date = if let Some(date_str) = new_created_at {
+        Some(NaiveDate::parse_from_str(&date_str, "%m-%d-%Y")
+            .map_err(|_| AppError::BadRequest("Invalid date format. Use MM-DD-YYYY".to_string()))?)
+    } else {
+        None
+    };
+
+    let updated_journal = journal_query::update_journal(
+        &mut conn, 
+        journal_id, 
+        user_id, 
+        new_title, 
+        new_content,
+        parsed_date 
+    )?;
 
     Ok(JournalResponse {
         id: updated_journal.id,

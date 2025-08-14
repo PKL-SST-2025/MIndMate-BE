@@ -38,13 +38,14 @@ pub struct JournalResponse {
 pub struct CreateJournalRequest {
     pub title: String,
     pub content: String,
-    pub created_at: Option<String>, // Changed from NaiveDate to String for MM-DD-YYYY format
+    pub created_at: Option<String>, 
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateJournalRequest {
     pub title: Option<String>,
     pub content: Option<String>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

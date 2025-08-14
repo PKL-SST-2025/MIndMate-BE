@@ -148,7 +148,14 @@ pub async fn update_journal_handler(
         .parse()
         .map_err(|_| AppError::BadRequest("Invalid user id".to_string()))?;
 
-    let updated_journal = update_journal(&pool, journal_id, user_id, data.title, data.content)?;
+    let updated_journal = update_journal(
+        &pool, 
+        journal_id, 
+        user_id, 
+        data.title, 
+        data.content,
+        data.created_at
+    )?;
     Ok(Json(updated_journal))
 }
 

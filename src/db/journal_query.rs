@@ -12,11 +12,17 @@ pub fn create_journal(
     content: &str,
     created_at: Option<NaiveDate>,
 ) -> Result<Journal, AppError> {
-    let created_date = created_at.unwrap_or_else(|| Utc::now().date_naive());
     let now = Utc::now().naive_utc();
     
-    // Convert NaiveDate to NaiveDateTime by adding time
-    let created_datetime = created_date.and_hms_opt(0, 0, 0).unwrap_or(now);
+    // Convert NaiveDate to NaiveDateTime
+    let created_datetime = if let Some(date) = created_at {
+        // Use the provided date at midnight
+        date.and_hms_opt(0, 0, 0)
+            .ok_or_else(|| AppError::BadRequest("Invalid date provided".to_string()))?
+    } else {
+        // Use current timestamp if no date provided
+        now
+    };
     
     let new_journal = NewJournal {
         user_id,
@@ -117,6 +123,7 @@ pub fn update_journal(
     user_id: i32,
     new_title: Option<String>,
     new_content: Option<String>,
+    new_created_at: Option<NaiveDate>, // Added this parameter
 ) -> Result<Journal, AppError> {
     // Check if journal exists and belongs to user
     let existing_journal = journals::table
@@ -129,14 +136,21 @@ pub fn update_journal(
             _ => AppError::DatabaseError(e.to_string()),
         })?;
 
-    // Build update query dynamically
+    // Build update values
     let title_to_update = new_title.unwrap_or(existing_journal.title);
     let content_to_update = new_content.unwrap_or(existing_journal.content);
+    let created_at_to_update = if let Some(date) = new_created_at {
+        date.and_hms_opt(0, 0, 0)
+            .ok_or_else(|| AppError::BadRequest("Invalid date provided".to_string()))?
+    } else {
+        existing_journal.created_at
+    };
 
     diesel::update(journals::table.filter(journals::id.eq(journal_id)))
         .set((
             journals::title.eq(title_to_update),
             journals::content.eq(content_to_update),
+            journals::created_at.eq(created_at_to_update),
             journals::updated_at.eq(Some(Utc::now().naive_utc())),
         ))
         .execute(conn)
